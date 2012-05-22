@@ -24,6 +24,6 @@ function reboot()
 	uci:save("ffhl")
 	uci:commit("ffhl")
 	
---	luci.sys.reboot()
+	luci.sys.reboot()
 end
 

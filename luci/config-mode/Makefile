@@ -3,23 +3,23 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=configmode
+PKG_NAME:=config-modee
 PKG_RELEASE:=0.0.1
 
 PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/configmode
+define Package/config-modee
   SECTION:=luci
   CATEGORY:=LuCI
   SUBMENU:=9. Freifunk
-  TITLE:=Luci based configmode for userfriendly setup of new meshnodes
+  TITLE:=Luci based config-modee for userfriendly setup of new meshnodes
   DEPENDS:=+firewall
 endef
 
-define Package/configmode/description
-	Luci based configmode
+define Package/config-modee/description
+	Luci based config-modee
 endef
 
 define Build/Prepare
@@ -32,8 +32,8 @@ endef
 define Build/Compile
 endef
 
-define Package/configmode/install
+define Package/config-modee/install
 	$(CP) ./files/* $(1)/
 endef
 
-$(eval $(call BuildPackage,configmode))
+$(eval $(call BuildPackage,config-modee))
