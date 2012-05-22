@@ -1,0 +1,15 @@
+<%
+	local disp = require "luci.dispatcher"
+	local f = io.popen("/etc/init.d/fastd show-key ffhl_mesh_vpn", "r")
+	local key = f:read("*a")
+	f:close()
+
+%>
+<%+header%>
+	<h2>Schlüsselaustausch</h2>
+	<p>Dies ist der öffentliche Schlüssel deines Freifunkknotens. Bitte schicke ihn an freifunk.luebeck@asta.uni-luebeck.de um ihn auf den Freifunkservern eintragen zu lassen. Sobald der Schlüssel eingetragen wurde, kann dein Knoten das Mesh-VPN nutzen.</p>
+	<pre>
+		<%=key%>
+	</pre>
+<%+ffhl-wizard/nav%>	
+<%+footer%>

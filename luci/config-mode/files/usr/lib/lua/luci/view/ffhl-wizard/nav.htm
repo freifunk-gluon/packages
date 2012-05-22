@@ -1,0 +1,16 @@
+<%
+        local nav = require "luci.tools.ffhl-wizard.nav"
+        local predecessor, successor = nav.get()
+%>
+        
+<% if predecessor then %>
+	<a href="<%=luci.dispatcher.build_url("wizard", predecessor.href)%>">
+		Zurück
+	</a>
+<% end %>
+
+<% if not have_form and successor then %>
+	<a href="<%=luci.dispatcher.build_url("wizard", successor.href)%>">
+		Weiter
+	</a>
+<% end %>
