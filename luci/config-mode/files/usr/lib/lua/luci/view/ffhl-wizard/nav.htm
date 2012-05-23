@@ -1,16 +1,20 @@
 <%
+        local disp = require "luci.dispatcher"
         local nav = require "luci.tools.ffhl-wizard.nav"
-        local predecessor, successor = nav.get()
-%>
-        
-<% if predecessor then %>
-	<a href="<%=luci.dispatcher.build_url("wizard", predecessor.href)%>">
-		Zurück
-	</a>
-<% end %>
+        local predecessor, successor = nav.get()        
+%>                                                    
+<%+header%>                                                               
+        <h2>Willkommen auf deinem Freifunkknoten!</h2>                    
+        <p>Dieser Wizard hilft dir deinen Freifunkknoten einzurichten.</p>
+                                                                                               
+<% if not have_form and successor then %>                                                      
+        <a class="btn primary" href="<%=luci.dispatcher.build_url("wizard", successor.href)%>">
+                Knoten neu einrichten                                                          
+        </a>                                                                                   
+<% end %>                                                                                      
+                                                                                            
+        <a class="btn" href="<%=luci.dispatcher.build_url("admin", "system", "flashops")%>">
+                Firmware upgrade einspielen                                                 
+        </a>                                                                                
+<%+footer%>                                                                                 
 
-<% if not have_form and successor then %>
-	<a href="<%=luci.dispatcher.build_url("wizard", successor.href)%>">
-		Weiter
-	</a>
-<% end %>
