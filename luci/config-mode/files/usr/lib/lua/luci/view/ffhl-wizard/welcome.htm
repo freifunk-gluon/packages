@@ -6,8 +6,9 @@
 <%+header%>                                                               
         <h2>Willkommen auf deinem Freifunkknoten!</h2>                    
         <p>Dieser Wizard hilft dir deinen Freifunkknoten einzurichten.</p>
-                                                                                               
-<% if not have_form and successor then %>                                                      
+
+<div class="actions">
+<% if successor then %>                                                      
         <a class="btn primary" href="<%=luci.dispatcher.build_url("wizard", successor.href)%>">
                 Knoten neu einrichten                                                          
         </a>                                                                                   
@@ -16,5 +17,6 @@
         <a class="btn" href="<%=luci.dispatcher.build_url("admin", "system", "flashops")%>">
                 Firmware upgrade einspielen                                                 
         </a>                                                                                
+</div>
 <%+footer%>                                                                                 
 
