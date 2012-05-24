@@ -17,16 +17,19 @@ function f.handle(self, state, data)
 		uci:commit("fastd")
 		
 		if data.meshvpn == "1" then
-			luci.sys.call("/etc/init.d/haveged start")
-			local f = io.popen("fastd --generate-key --machine-readable", "r")
-			local secret = f:read("*a")
-			f:close()
-			luci.sys.call("/etc/init.d/haveged stop")
+      local secret = uci:get("fastd", "ffhl_mesh_vpn", "secret")
+      if not secret or not secret:match("%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x") then 
+	  		luci.sys.call("/etc/init.d/haveged start")
+  			local f = io.popen("fastd --generate-key --machine-readable", "r")
+		  	local secret = f:read("*a")
+	  		f:close()
+  			luci.sys.call("/etc/init.d/haveged stop")
 
-			uci:set("fastd", "ffhl_mesh_vpn", "secret", secret)
-			uci:save("fastd")
-			uci:commit("fastd")
+			  uci:set("fastd", "ffhl_mesh_vpn", "secret", secret)
+		  	uci:save("fastd")
+	  		uci:commit("fastd")
 			
+      end
 			luci.http.redirect(luci.dispatcher.build_url("wizard", "meshvpn", "pubkey"))
 		else
 			nav.maybe_redirect_to_successor()
