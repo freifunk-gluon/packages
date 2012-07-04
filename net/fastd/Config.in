@@ -1,0 +1,14 @@
+menu "Configuration"
+	depends on PACKAGE_fastd
+
+config FASTD_DISABLE_METHOD_XSALSA20_POLY1305
+	bool "Disable xsalsa20-poly1305 method"
+	depends on PACKAGE_fastd
+	default n
+
+config FASTD_DISABLE_METHOD_AES128_GCM
+	bool "Disable aes128-gcm method"
+	depends on PACKAGE_fastd
+	default n
+
+endmenu
