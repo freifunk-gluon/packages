@@ -9,12 +9,20 @@ meshvpn = f:field(Flag, "meshvpn", "Mesh-VPN aktivieren?")
 meshvpn.default = string.format("%d", uci:get("fastd", "ffhl_mesh_vpn", "enabled"))
 meshvpn.rmempty = false
 
+upstream = f:field(Value, "upstream", "Upstream bandwidth (kbit/s)")
+upstream.default = uci:get("ffhl", "bandwidth", "upstream")
+downstream = f:field(Value, "dowstream", "Downstream bandwidth (kbit/s)")
+downstream.default = uci:get("ffhl", "bandwidth", "downstream")
+
 function f.handle(self, state, data)
 	if state == FORM_VALID then
 		local stat = false	
 		uci:set("fastd", "ffhl_mesh_vpn", "enabled", data.meshvpn)
 		uci:save("fastd")
 		uci:commit("fastd")
+
+		uci:set("ffhl", "bandwidth", "upstream", data.upstream)
+		uci:set("ffhl", "bandwidth", "downstream", data.downstream)
 		
 		if data.meshvpn == "1" then
       local secret = uci:get("fastd", "ffhl_mesh_vpn", "secret")

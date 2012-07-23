@@ -2,3 +2,6 @@
 config wizard
 	option enabled '1'
 
+config bandwidth
+  option upstream 0
+  option downstream 0
