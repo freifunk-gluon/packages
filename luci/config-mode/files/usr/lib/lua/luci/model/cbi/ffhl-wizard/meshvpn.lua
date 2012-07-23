@@ -10,9 +10,9 @@ meshvpn.default = string.format("%d", uci:get("fastd", "ffhl_mesh_vpn", "enabled
 meshvpn.rmempty = false
 
 upstream = f:field(Value, "upstream", "Upstream bandwidth (kbit/s)")
-upstream.default = uci:get("ffhl", "bandwidth", "upstream")
-downstream = f:field(Value, "dowstream", "Downstream bandwidth (kbit/s)")
-downstream.default = uci:get("ffhl", "bandwidth", "downstream")
+upstream.value = uci:get_first("ffhl", "bandwidth", "upstream")
+downstream = f:field(Value, "downstream", "Downstream bandwidth (kbit/s)")
+downstream.value = uci:get_first("ffhl", "bandwidth", "downstream")
 
 function f.handle(self, state, data)
 	if state == FORM_VALID then
@@ -20,10 +20,16 @@ function f.handle(self, state, data)
 		uci:set("fastd", "ffhl_mesh_vpn", "enabled", data.meshvpn)
 		uci:save("fastd")
 		uci:commit("fastd")
-
-		uci:set("ffhl", "bandwidth", "upstream", data.upstream)
-		uci:set("ffhl", "bandwidth", "downstream", data.downstream)
 		
+	        uci:foreach("ffhl", "bandwidth", function(s)
+	                uci:set("ffhl", s[".name"], "upstream", data.upstream)
+	                uci:set("ffhl", s[".name"], "downstream", data.downstream)
+	                end
+	        )
+
+	        uci:save("ffhl")
+	        uci:commit("ffhl")
+
 		if data.meshvpn == "1" then
       local secret = uci:get("fastd", "ffhl_mesh_vpn", "secret")
       if not secret or not secret:match("%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x") then 

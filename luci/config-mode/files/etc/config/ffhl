@@ -5,3 +5,4 @@ config wizard
 config bandwidth
   option upstream 0
   option downstream 0
+  option disabled 1
