@@ -15,42 +15,42 @@ downstream = f:field(Value, "downstream", "Downstream bandwidth (kbit/s)")
 downstream.value = uci:get_first("ffhl", "bandwidth", "downstream")
 
 function f.handle(self, state, data)
-	if state == FORM_VALID then
-		local stat = false	
-		uci:set("fastd", "ffhl_mesh_vpn", "enabled", data.meshvpn)
-		uci:save("fastd")
-		uci:commit("fastd")
-		
-	        uci:foreach("ffhl", "bandwidth", function(s)
-	                uci:set("ffhl", s[".name"], "upstream", data.upstream)
-	                uci:set("ffhl", s[".name"], "downstream", data.downstream)
-	                end
-	        )
+  if state == FORM_VALID then
+    local stat = false
+    uci:set("fastd", "ffhl_mesh_vpn", "enabled", data.meshvpn)
+    uci:save("fastd")
+    uci:commit("fastd")
 
-	        uci:save("ffhl")
-	        uci:commit("ffhl")
+    uci:foreach("ffhl", "bandwidth", function(s)
+            uci:set("ffhl", s[".name"], "upstream", data.upstream)
+            uci:set("ffhl", s[".name"], "downstream", data.downstream)
+            end
+    )
 
-		if data.meshvpn == "1" then
+    uci:save("ffhl")
+    uci:commit("ffhl")
+
+    if data.meshvpn == "1" then
       local secret = uci:get("fastd", "ffhl_mesh_vpn", "secret")
-      if not secret or not secret:match("%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x") then 
-	  		luci.sys.call("/etc/init.d/haveged start")
-  			local f = io.popen("fastd --generate-key --machine-readable", "r")
-		  	local secret = f:read("*a")
-	  		f:close()
-  			luci.sys.call("/etc/init.d/haveged stop")
+      if not secret or not secret:match("%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x") then
+        luci.sys.call("/etc/init.d/haveged start")
+        local f = io.popen("fastd --generate-key --machine-readable", "r")
+        local secret = f:read("*a")
+        f:close()
+        luci.sys.call("/etc/init.d/haveged stop")
 
-			  uci:set("fastd", "ffhl_mesh_vpn", "secret", secret)
-		  	uci:save("fastd")
-	  		uci:commit("fastd")
-			
+        uci:set("fastd", "ffhl_mesh_vpn", "secret", secret)
+        uci:save("fastd")
+        uci:commit("fastd")
+
       end
-			luci.http.redirect(luci.dispatcher.build_url("wizard", "meshvpn", "pubkey"))
-		else
-			nav.maybe_redirect_to_successor()
-		end
-	end
-	
-	return true
+      luci.http.redirect(luci.dispatcher.build_url("wizard", "meshvpn", "pubkey"))
+    else
+      nav.maybe_redirect_to_successor()
+    end
+  end
+
+  return true
 end
 
 return f

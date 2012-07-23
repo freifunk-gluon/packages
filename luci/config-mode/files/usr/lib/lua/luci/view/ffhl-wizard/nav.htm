@@ -4,16 +4,16 @@
 %>
 
 <div class="actions">
-        
+
 <% if successor then %>
-	<a class="btn primary" href="<%=luci.dispatcher.build_url("wizard", successor.href)%>">
-		Weiter
-	</a>
+  <a class="btn primary" href="<%=luci.dispatcher.build_url("wizard", successor.href)%>">
+    Weiter
+  </a>
 <% end %>
 
 <% if predecessor then %>
-	<a class="btn" href="<%=luci.dispatcher.build_url("wizard", predecessor.href)%>">
-		Zurück
-	</a>
+  <a class="btn" href="<%=luci.dispatcher.build_url("wizard", predecessor.href)%>">
+    Zurück
+  </a>
 <% end %>
 </div>

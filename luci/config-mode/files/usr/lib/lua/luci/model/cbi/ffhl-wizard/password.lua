@@ -12,25 +12,25 @@ pw2.password = true
 pw2.rmempty = false
 
 function pw2.validate(self, value, section)
-	return pw1:formvalue(section) == value and value
+  return pw1:formvalue(section) == value and value
 end
 
 function f.handle(self, state, data)
-	if state == FORM_VALID then
-		local stat = luci.sys.user.setpasswd("root", data.pw1) == 0
-		
-		if stat then
-		        nav.maybe_redirect_to_successor()
-		        f.message = "Passwort geändert!"
-		else
-			f.errmessage = "Fehler!"
-		end
-		
-		data.pw1 = nil
-		data.pw2 = nil
-	end
-	
-	return true
+  if state == FORM_VALID then
+    local stat = luci.sys.user.setpasswd("root", data.pw1) == 0
+
+    if stat then
+            nav.maybe_redirect_to_successor()
+            f.message = "Passwort geändert!"
+    else
+      f.errmessage = "Fehler!"
+    end
+
+    data.pw1 = nil
+    data.pw2 = nil
+  end
+
+  return true
 end
 
 return f

@@ -10,29 +10,29 @@ hostname.value = uci:get_first("system", "system", "hostname")
 hostname.rmempty = false
 
 function hostname.validate(self, value, section)
-	return value
+  return value
 end
 
 function f.handle(self, state, data)
-	if state == FORM_VALID then
-		local stat = true
-		uci:foreach("system", "system", function(s)
-				stat = stat and uci:set("system", s[".name"], "hostname", data.hostname)
-			end
-		)
-		
-		stat = stat and uci:save("system")
-		stat = stat and uci:commit("system")
-		
-		if stat then
-			nav.maybe_redirect_to_successor()
-		        f.message = "Hostname geändert!"
-		else
-			f.errmessage = "Fehler!"
-		end
-	end
-	
-	return true
+  if state == FORM_VALID then
+    local stat = true
+    uci:foreach("system", "system", function(s)
+        stat = stat and uci:set("system", s[".name"], "hostname", data.hostname)
+      end
+    )
+
+    stat = stat and uci:save("system")
+    stat = stat and uci:commit("system")
+
+    if stat then
+      nav.maybe_redirect_to_successor()
+            f.message = "Hostname geändert!"
+    else
+      f.errmessage = "Fehler!"
+    end
+  end
+
+  return true
 end
 
 return f
