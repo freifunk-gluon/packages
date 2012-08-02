@@ -10,9 +10,7 @@ meshvpn.default = string.format("%d", uci:get("fastd", "ffhl_mesh_vpn", "enabled
 meshvpn.rmempty = false
 
 tc = f:field(Flag, "tc", "Bandbreitenbegrenzung aktivieren?")
-local v = string.format("%d", uci:get_first("ffhl", "bandwidth", "disabled"))
-if v == "1" then v = "0" else v = "1" end
-tc.default = v
+tc.default = string.format("%d", uci:get_first("ffhl", "bandwidth", "enabled"))
 tc.rmempty = false
 
 upstream = f:field(Value, "upstream", "Upstream bandwidth (kbit/s)")
@@ -27,13 +25,10 @@ function f.handle(self, state, data)
     uci:save("fastd")
     uci:commit("fastd")
 
-    local v = string.format("%d", data.tc)
-    if v == "1" then v = "0" else v = "1" end
-
     uci:foreach("ffhl", "bandwidth", function(s)
             uci:set("ffhl", s[".name"], "upstream", data.upstream)
             uci:set("ffhl", s[".name"], "downstream", data.downstream)
-            uci:set("ffhl", s[".name"], "disabled", v)
+            uci:set("ffhl", s[".name"], "enabled", data.tc)
             end
     )
 
