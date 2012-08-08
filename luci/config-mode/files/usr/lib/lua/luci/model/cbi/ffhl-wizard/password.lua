@@ -1,6 +1,13 @@
 local nav = require "luci.tools.ffhl-wizard.nav"
 
-f = SimpleForm("password", "Administrator Passwort setzen", "Damit nur du Zugriff auf deinen Freifunkknoten hast, solltest du jetzt ein Passwort vergeben.</p><p>Bitte wähle ein sicheres Passwort. Sonst könnten Leute wilden Scheiß machen, den du nicht willst!")
+f = SimpleForm("password", "Administrator-Passwort setzen", "<p>Damit nur du Zugriff auf deinen Freifunkknoten hast, solltest du jetzt ein Passwort vergeben. \
+Da man mit Hilfe von diesem beliebige Einstellungen geändert werden können, sollte es möglichst sicher sein.</p>\
+<p>Bitte beachte dazu folgende Hinweise:</p>\
+<ul>\
+  <li>Es sollte in keinem Wörterbuch vorkommen.</li>\
+  <li>Es sollte mehr als acht Zeichen beinhalten.</li>\
+  <li>Es sollte auch Zahlen & Sonderzeichen enthalten.</li>\
+</ul>")
 f.template = "ffhl-wizard/wizardform"
 
 pw1 = f:field(Value, "pw1", "Passwort")
