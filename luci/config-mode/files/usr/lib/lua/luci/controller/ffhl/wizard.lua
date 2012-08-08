@@ -1,8 +1,8 @@
 module("luci.controller.ffhl.wizard", package.seeall)
 
 function index()
-  local uci = luci.model.uci.cursor()
-  if uci:get_first("ffhl", "wizard", "enabled") == "1" then
+  local uci_state = luci.model.uci.cursor_state()
+  if uci_state:get_first("ffhl", "wizard", "running", "0") == "1" then
     entry({"wizard", "welcome"}, template("ffhl-wizard/welcome"), "Willkommen", 10).dependent=false
     entry({"wizard", "password"}, form("ffhl-wizard/password"), "Passwort", 20).dependent=false
     entry({"wizard", "hostname"}, form("ffhl-wizard/hostname"), "Hostname", 30).dependent=false
@@ -16,10 +16,11 @@ end
 function reboot()
   local uci = luci.model.uci.cursor()
 
-  uci:foreach("ffhl", "wizard", function(s)
-    uci:set("ffhl", s[".name"], "enabled", "0")
-    end
-  )
+  uci:foreach("ffhl", "wizard",
+              function(s)
+                uci:set("ffhl", s[".name"], "configured", "1")
+              end
+             )
 
   uci:save("ffhl")
   uci:commit("ffhl")
