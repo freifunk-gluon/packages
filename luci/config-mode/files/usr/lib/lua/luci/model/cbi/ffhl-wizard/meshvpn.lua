@@ -6,17 +6,17 @@ local f = SimpleForm("meshvpn", "Mesh-VPN", "Um deinen Freifunkknoten auch über
 f.template = "ffhl-wizard/wizardform"
 
 meshvpn = f:field(Flag, "meshvpn", "Mesh-VPN aktivieren?")
-meshvpn.default = string.format("%d", uci:get("fastd", "ffhl_mesh_vpn", "enabled"))
+meshvpn.default = string.format("%d", uci:get("fastd", "ffhl_mesh_vpn", "enabled", "0"))
 meshvpn.rmempty = false
 
 tc = f:field(Flag, "tc", "Bandbreitenbegrenzung aktivieren?")
-tc.default = string.format("%d", uci:get_first("ffhl", "bandwidth", "enabled"))
+tc.default = string.format("%d", uci:get_first("ffhl", "bandwidth", "enabled", "0"))
 tc.rmempty = false
 
 upstream = f:field(Value, "upstream", "Upstream bandwidth (kbit/s)")
-upstream.value = uci:get_first("ffhl", "bandwidth", "upstream")
+upstream.value = uci:get_first("ffhl", "bandwidth", "upstream", "0")
 downstream = f:field(Value, "downstream", "Downstream bandwidth (kbit/s)")
-downstream.value = uci:get_first("ffhl", "bandwidth", "downstream")
+downstream.value = uci:get_first("ffhl", "bandwidth", "downstream", "0")
 
 function f.handle(self, state, data)
   if state == FORM_VALID then
