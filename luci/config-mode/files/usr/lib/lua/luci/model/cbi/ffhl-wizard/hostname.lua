@@ -2,7 +2,7 @@ local uci = luci.model.uci.cursor()
 
 local nav = require "luci.tools.ffhl-wizard.nav"
 
-local f = SimpleForm("hostname", "Name deines Freifunkknotens", "Als nächstes solltest du einem Freifunkknoten einen individuellen Namen geben. Dieser hilft dir und auch uns den Überblick    zu behalten.")
+local f = SimpleForm("hostname", "Name deines Freifunkknotens", "Als nächstes solltest du einem Freifunkknoten einen individuellen Namen geben. Dieser hilft dir und auch uns den Überblick zu behalten.")
 f.template = "ffhl-wizard/wizardform"
 
 hostname = f:field(Value, "hostname", "Hostname")
