@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=fastd
-PKG_VERSION:=0.5-rc2
+PKG_VERSION:=0.5-rc4
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_SOURCE_URL:=https://projects.universe-factory.net/attachments/download/32
-PKG_MD5SUM:=74b2ab08f90303f8ae1937e99c734134
+PKG_SOURCE_URL:=https://projects.universe-factory.net/attachments/download/34
+PKG_MD5SUM:=f341811a69146e1befc14a7920781511
 
 PKG_CONFIG_DEPENDS:=CONFIG_FASTD_DISABLE_METHOD_XSALSA20_POLY1305 CONFIG_FASTD_DISABLE_METHOD_AES128_GCM
 PKG_BUILD_DEPENDS:=nacl libuecc
