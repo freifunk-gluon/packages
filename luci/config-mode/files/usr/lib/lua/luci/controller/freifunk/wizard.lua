@@ -2,7 +2,7 @@ module("luci.controller.freifunk.wizard", package.seeall)
 
 function index()
   local uci_state = luci.model.uci.cursor_state()
-  if uci_state:get_first("freifunk", "wizard", "running", "0") == "1" then
+  if uci_state:get_first("config_mode", "wizard", "running", "0") == "1" then
     entry({"wizard", "welcome"}, template("freifunk-wizard/welcome"), "Willkommen", 10).dependent=false
     entry({"wizard", "password"}, form("freifunk-wizard/password"), "Passwort", 20).dependent=false
     entry({"wizard", "hostname"}, form("freifunk-wizard/hostname"), "Hostname", 30).dependent=false
