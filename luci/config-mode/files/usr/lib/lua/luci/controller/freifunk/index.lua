@@ -6,10 +6,8 @@ function index()
 
   if uci_state:get_first("config_mode", "wizard", "running", "0") == "1" then
     local root = node()
-    if not root.target then
-      root.target = alias("wizard", "welcome")
-      root.index = true
-    end
+    root.target = alias("wizard", "welcome")
+    root.index = true
   end
 end
 
