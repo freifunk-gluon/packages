@@ -1,4 +1,4 @@
-local meshvpn = "ffhl_mesh_vpn"
+local meshvpn_name = "ffhl_mesh_vpn"
 
 local uci = luci.model.uci.cursor()
 local nav = require "luci.tools.freifunk-wizard.nav"
@@ -12,7 +12,7 @@ und maximal ein Viertel der Leitung zur Verfügung stellen willst, muss als Down
 f.template = "freifunk-wizard/wizardform"
 
 meshvpn = f:field(Flag, "meshvpn", "Mesh-VPN aktivieren?")
-meshvpn.default = string.format("%d", uci:get("fastd", meshvpn, "enabled", "0"))
+meshvpn.default = string.format("%d", uci:get("fastd", meshvpn_name, "enabled", "0"))
 meshvpn.rmempty = false
 
 tc = f:field(Flag, "tc", "Bandbreitenbegrenzung aktivieren?")
@@ -27,7 +27,7 @@ upstream.value = uci:get_first("freifunk", "bandwidth", "upstream", "0")
 function f.handle(self, state, data)
   if state == FORM_VALID then
     local stat = false
-    uci:set("fastd", meshvpn, "enabled", data.meshvpn)
+    uci:set("fastd", meshvpn_name, "enabled", data.meshvpn)
     uci:save("fastd")
     uci:commit("fastd")
 
@@ -42,7 +42,7 @@ function f.handle(self, state, data)
     uci:commit("freifunk")
 
     if data.meshvpn == "1" then
-      local secret = uci:get("fastd", meshvpn, "secret")
+      local secret = uci:get("fastd", meshvpn_name, "secret")
       if not secret or not secret:match("%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x") then
         luci.sys.call("/etc/init.d/haveged start")
         local f = io.popen("fastd --generate-key --machine-readable", "r")
@@ -50,7 +50,7 @@ function f.handle(self, state, data)
         f:close()
         luci.sys.call("/etc/init.d/haveged stop")
 
-        uci:set("fastd", meshvpn, "secret", secret)
+        uci:set("fastd", meshvpn_name, "secret", secret)
         uci:save("fastd")
         uci:commit("fastd")
 
