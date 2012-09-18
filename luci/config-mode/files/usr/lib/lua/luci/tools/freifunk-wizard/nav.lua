@@ -1,4 +1,4 @@
-module("luci.tools.ffhl-wizard.nav", package.seeall)
+module("luci.tools.freifunk-wizard.nav", package.seeall)
 
 function maybe_redirect_to_successor()
   local pre, suc = get()
