@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=fastd
-PKG_VERSION:=0.5
+PKG_VERSION:=6
 PKG_RELEASE:=1
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_SOURCE_URL:=https://projects.universe-factory.net/attachments/download/35
-PKG_MD5SUM:=f7cc6fdddf52aab2b3f582d22159de4f
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
+PKG_SOURCE_URL:=https://projects.universe-factory.net/attachments/download/36
+PKG_MD5SUM:=91c871830b2ceeaf54470332825844c7
 
 PKG_CONFIG_DEPENDS:=\
 	CONFIG_FASTD_ENABLE_METHOD_XSALSA20_POLY1305 \
