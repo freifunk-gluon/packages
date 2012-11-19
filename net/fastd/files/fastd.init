@@ -79,8 +79,8 @@ start_instance() {
 		return 1
 	fi
 
-	append_opts_list "$s" config config_peer_dir
-	append_opts "$s" syslog_level bind method mode interface mtu
+	append_opts_list "$s" config config_peer_dir bind method
+	append_opts "$s" syslog_level mode interface mtu
 	append_opts_bool "$s" forward
 
 	mkdir -p "$TMP_FASTD"
