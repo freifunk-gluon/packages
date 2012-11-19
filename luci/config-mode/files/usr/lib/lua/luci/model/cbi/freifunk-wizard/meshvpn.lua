@@ -1,4 +1,4 @@
-local meshvpn_name = "ffhl_mesh_vpn"
+local meshvpn_name = "mesh_vpn"
 
 local uci = luci.model.uci.cursor()
 local nav = require "luci.tools.freifunk-wizard.nav"
