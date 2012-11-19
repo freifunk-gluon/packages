@@ -15,7 +15,7 @@ define Package/config-mode
   CATEGORY:=LuCI
   SUBMENU:=9. Freifunk
   TITLE:=Luci based config-mode for userfriendly setup of new meshnodes
-  DEPENDS:=+firewall
+  DEPENDS:=+luci-mod-admin-core
 endef
 
 define Package/config-mode/description
