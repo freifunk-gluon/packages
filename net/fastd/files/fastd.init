@@ -8,7 +8,7 @@ EXTRA_COMMANDS="up down show_key"
 LIST_SEP="
 "
 TMP_FASTD=/tmp/fastd
-FASTD_COMMAND=/usr/sbin/fastd
+FASTD_COMMAND=/usr/bin/fastd
 
 append_opt() {
 	local v="$1"; local p="$2"

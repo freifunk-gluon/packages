@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=fastd
-PKG_VERSION:=6
+PKG_VERSION:=7
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
-PKG_SOURCE_URL:=https://projects.universe-factory.net/attachments/download/36
-PKG_MD5SUM:=91c871830b2ceeaf54470332825844c7
+PKG_SOURCE_URL:=https://projects.universe-factory.net/attachments/download/43
+PKG_MD5SUM:=17dd6049d072f24dba9d959ac9edbc16
 
 PKG_CONFIG_DEPENDS:=\
 	CONFIG_FASTD_ENABLE_METHOD_XSALSA20_POLY1305 \
@@ -43,7 +43,7 @@ endef
 
 CMAKE_OPTIONS += \
 	-DCMAKE_BUILD_TYPE:String="MINSIZEREL" \
-
+	-DWITH_CAPABILITIES=FALSE
 
 ifeq ($(CONFIG_FASTD_ENABLE_METHOD_XSALSA20_POLY1305),y)
 CMAKE_OPTIONS += \
@@ -103,8 +103,8 @@ define Package/fastd/conffiles
 endef
 
 define Package/fastd/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/fastd $(1)/usr/sbin/
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/fastd $(1)/usr/bin/
 
 	$(INSTALL_DIR) $(1)/etc/init.d/
 	$(INSTALL_BIN) files/fastd.init $(1)/etc/init.d/fastd
