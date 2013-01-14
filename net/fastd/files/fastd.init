@@ -54,6 +54,70 @@ error() {
 	echo "${initscript}:" "$@" 1>&2
 }
 
+create_peer_config() {
+	local s="$2"; local peer="$1"
+
+	config_get net "$peer" net
+	[ "$net" == "$s" ] || return 0
+
+	section_enabled "$peer" || return 0
+
+	config_get key "$peer" key
+	config_get address "$peer" address
+	config_get hostname "$peer" hostname
+	config_get address_family "$peer" address_family
+	config_get port "$peer" port
+	config_get_bool float "$peer" float 0
+
+	if [ -z "$key" ]; then
+		error "peer $peer: key is not set"
+		return 1
+	fi
+
+	local remote=''
+	if [ "$address" -o "$hostname" ]; then
+		if [ "$address" -a "$hostname" ]; then
+			error "peer $peer: both address and hostname given"
+			return 1
+		fi
+
+		if [ "$float" = 0 ]; then
+			float=''
+		else
+			float='float'
+		fi
+
+		if [ "$port" ]; then
+			if [ "$address" ]; then
+				remote="remote $address port $port $float;"
+			else # $hostname
+				if [ "$address_family" -a "$address_family" != 'ipv4' -a "$address_family" != 'ipv6' ]; then
+					error "peer $peer: invalid address family given"
+					return 1
+				fi
+				remote="remote $address_family \"$hostname\" port $port $float;"
+			fi
+		else
+			error "peer $peer: address or hostname, but no port given"
+			return 1
+		fi
+	fi
+
+	cat > "$TMP_FASTD/fastd.$s.peers/$peer" <<EOF
+key "$key";
+$remote
+EOF
+}
+
+update_peers_instance() {
+	local s="$1"
+
+	rm -rf "$TMP_FASTD/fastd.$s.peers"
+	mkdir -p "$TMP_FASTD/fastd.$s.peers"
+
+	config_foreach create_peer_config 'peer' "$s"
+}
+
 get_key_instance() {
 	local s="$1"
 
@@ -123,7 +187,9 @@ start_instance() {
 	append_opts "$s" syslog_level mode interface mtu
 	append_opts_bool "$s" forward
 
-	eval service_start "'$FASTD_COMMAND'" --daemon --pid-file "'$SERVICE_PID_FILE'" --syslog-level info $OPTS --config - <<EOF
+	update_peers_instance "$s"
+
+	eval service_start "'$FASTD_COMMAND'" --daemon --pid-file "'$SERVICE_PID_FILE'" --syslog-level info $OPTS --config-peer-dir "$TMP_FASTD/fastd.$s.peers" --config - <<EOF
 secret "$secret";
 EOF
 
@@ -158,12 +224,16 @@ stop_instance() {
 	[ -n "$down" ] && sh -c "$down" - "$interface"
 
 	service_stop "$FASTD_COMMAND"
+
+	rm -rf "$TMP_FASTD/fastd.$s.peers"
 }
 
 reload_instance() {
         local s="$1"
 
         section_enabled "$s" || return 1
+
+	update_peers_instance "$s"
 
         SERVICE_PID_FILE="/var/run/fastd.$s.pid"
         service_reload "$FASTD_COMMAND"
