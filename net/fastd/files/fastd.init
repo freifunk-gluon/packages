@@ -1,9 +1,9 @@
 #!/bin/sh /etc/rc.common
-# Copyright (C) 2012 OpenWrt.org
+# Copyright (C) 2012-2013 OpenWrt.org
 
 START=95
 
-EXTRA_COMMANDS="up down show_key"
+EXTRA_COMMANDS="up down show_key generate_key"
 
 LIST_SEP="
 "
@@ -34,7 +34,7 @@ append_opts_bool() {
 	local p; local v; local s="$1"; shift
 	for p in $*; do
 		config_get_bool v "$s" "$p" 0
-		[ "$v" == 1 ] && append_opt_bool "$p"
+		[ "$v" = 1 ] && append_opt_bool "$p"
 	done
 }
 
@@ -52,6 +52,46 @@ section_enabled() {
 
 error() {
 	echo "${initscript}:" "$@" 1>&2
+}
+
+get_key_instance() {
+	local s="$1"
+
+	config_get secret "$s" secret
+	if [ "$secret" = 'generate' ]; then
+		secret=`fastd --generate-key --machine-readable`
+		uci -q set fastd."$s".secret="$secret" && uci -q commit fastd
+	fi
+
+	echo "$secret"
+}
+
+generate_key_instance() {
+	local s="$1"
+
+	config_get secret "$s" secret
+	if [ -z "$secret" -o "$secret" = 'generate' ]; then
+		secret=`fastd --generate-key --machine-readable`
+		uci -q set fastd."$s".secret="$secret" && uci -q commit fastd
+	fi
+
+	"$FASTD_COMMAND" --config - --show-key --machine-readable <<EOF
+secret "$secret";
+EOF
+}
+
+show_key_instance() {
+	local s="$1"
+
+	local secret=`get_key_instance "$s"`
+	if [ -z "$secret" ]; then
+		error "$s: secret is not set"
+		return 1
+	fi
+
+	"$FASTD_COMMAND" --config - --show-key --machine-readable <<EOF
+secret "$secret";
+EOF
 }
 
 start_instance() {
@@ -73,7 +113,7 @@ start_instance() {
 		return 1
 	fi
 
-	config_get secret "$s" secret
+	local secret=`get_key_instance "$s"`
 	if [ -z "$secret" ]; then
 		error "$s: secret is not set"
 		return 1
@@ -83,10 +123,9 @@ start_instance() {
 	append_opts "$s" syslog_level mode interface mtu
 	append_opts_bool "$s" forward
 
-	mkdir -p "$TMP_FASTD"
-	echo "secret \"$secret\";" > "$TMP_FASTD/secret.$s.conf"
-
-	eval service_start "'$FASTD_COMMAND'" --daemon --pid-file "'$SERVICE_PID_FILE'" --syslog-level info $OPTS --config "'$TMP_FASTD/secret.$s.conf'"
+	eval service_start "'$FASTD_COMMAND'" --daemon --pid-file "'$SERVICE_PID_FILE'" --syslog-level info $OPTS --config - <<EOF
+secret "$secret";
+EOF
 
 	if ! ifconfig "$interface" >/dev/null 2>&1; then
 		error "$s: startup failed"
@@ -119,23 +158,6 @@ stop_instance() {
 	[ -n "$down" ] && sh -c "$down" - "$interface"
 
 	service_stop "$FASTD_COMMAND"
-
-	rm -f "$TMP_FASTD/secret.$s.conf"
-}
-
-show_key_instance() {
-	local s="$1"
-
-	config_get secret "$s" secret
-	if [ -z "$secret" ]; then
-		error "$s: secret is not set"
-		return 1
-	fi
-
-	mkdir -p "$TMP_FASTD"
-	echo "secret \"$secret\";" > "$TMP_FASTD/secret.$s.conf"
-
-	"$FASTD_COMMAND" --config "$TMP_FASTD/secret.$s.conf" --show-key --machine-readable
 }
 
 reload_instance() {
@@ -168,7 +190,7 @@ up() {
 	config_load 'fastd'
 	for instance in "$@"; do
 		config_get exists "$instance" 'TYPE'
-		if [ "$exists" == "fastd" ]; then
+		if [ "$exists" = 'fastd' ]; then
 			start_instance "$instance"
 		fi
 	done
@@ -180,7 +202,7 @@ down() {
 	config_load 'fastd'
 	for instance in "$@"; do
 		config_get exists "$instance" 'TYPE'
-		if [ "$exists" == "fastd" ]; then
+		if [ "$exists" = 'fastd' ]; then
 			stop_instance "$instance"
 		fi
 	done
@@ -192,8 +214,20 @@ show_key() {
 	config_load 'fastd'
 	for instance in "$@"; do
 		config_get exists "$instance" 'TYPE'
-		if [ "$exists" == "fastd" ]; then
+		if [ "$exists" = 'fastd' ]; then
 			show_key_instance "$instance"
+		fi
+	done
+}
+
+generate_key() {
+	local exists
+	local instance
+	config_load 'fastd'
+	for instance in "$@"; do
+		config_get exists "$instance" 'TYPE'
+		if [ "$exists" = 'fastd' ]; then
+			generate_key_instance "$instance"
 		fi
 	done
 }
