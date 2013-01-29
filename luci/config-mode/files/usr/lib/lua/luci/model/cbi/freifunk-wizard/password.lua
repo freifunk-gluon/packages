@@ -6,7 +6,7 @@ Da man mit Hilfe von diesem beliebige Einstellungen geändert werden können, so
 <ul>\
   <li>Es sollte in keinem Wörterbuch vorkommen.</li>\
   <li>Es sollte mehr als acht Zeichen beinhalten.</li>\
-  <li>Es sollte auch Zahlen & Sonderzeichen enthalten.</li>\
+  <li>Es sollte auch Zahlen &amp; Sonderzeichen enthalten.</li>\
 </ul>")
 f.template = "freifunk-wizard/wizardform"
 
