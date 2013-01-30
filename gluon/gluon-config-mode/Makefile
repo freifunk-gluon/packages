@@ -3,23 +3,22 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=config-mode
+PKG_NAME:=gluon-config-mode
 PKG_RELEASE:=0.0.1
 
 PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/config-mode
-  SECTION:=luci
-  CATEGORY:=LuCI
-  SUBMENU:=9. Freifunk
-  TITLE:=Luci based config-mode for userfriendly setup of new meshnodes
+define Package/gluon-config-mode
+  SECTION:=gluon
+  CATEGORY:=Gluon
+  TITLE:=Luci based config mode for user friendly setup of new meshnodes
   DEPENDS:=+luci-mod-admin-core
 endef
 
-define Package/config-mode/description
-	Luci based config-mode
+define Package/gluon-config-mode/description
+	Luci based config mode
 endef
 
 define Build/Prepare
@@ -32,8 +31,8 @@ endef
 define Build/Compile
 endef
 
-define Package/config-mode/install
+define Package/gluon-config-mode/install
 	$(CP) ./files/* $(1)/
 endef
 
-$(eval $(call BuildPackage,config-mode))
+$(eval $(call BuildPackage,gluon-config-mode))
