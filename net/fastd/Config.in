@@ -1,0 +1,34 @@
+menu "Configuration"
+	depends on PACKAGE_fastd
+
+config FASTD_ENABLE_METHOD_XSALSA20_POLY1305
+	bool "Enable xsalsa20-poly1305 method"
+	depends on PACKAGE_fastd
+	default y
+
+config FASTD_ENABLE_METHOD_AES128_GCM
+	bool "Enable aes128-gcm method"
+	depends on PACKAGE_fastd && (FASTD_ENABLE_CRYPTO_AES128CTR_NACL || FASTD_ENABLE_CRYPTO_AES128CTR_LINUX) && (FASTD_ENABLE_CRYPTO_GHASH_BUILTIN || FASTD_ENABLE_CRYPTO_GHASH_LINUX)
+	default y
+
+config FASTD_ENABLE_CRYPTO_AES128CTR_NACL
+	bool "Include the AES128-CTR implementation from the NaCl library"
+	depends on PACKAGE_fastd
+	default y
+
+config FASTD_ENABLE_CRYPTO_AES128CTR_LINUX
+	bool "Support using the AES128-CTR implementation in the Linux kernel"
+	depends on PACKAGE_fastd
+	default y
+
+config FASTD_ENABLE_CRYPTO_GHASH_BUILTIN
+	bool "Include the built-in GHASH implementation"
+	depends on PACKAGE_fastd
+	default y
+
+config FASTD_ENABLE_CRYPTO_GHASH_LINUX
+	bool "Support using the GHASH implementation in the Linux kernel"
+	depends on PACKAGE_fastd
+	default y
+
+endmenu
