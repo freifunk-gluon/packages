@@ -183,7 +183,7 @@ start_instance() {
 		return 1
 	fi
 
-	append_opts_list "$s" config config_peer_dir bind method
+	append_opts_list "$s" config config_peer_dir config_peer bind method
 	append_opts "$s" syslog_level mode interface mtu
 	append_opts_bool "$s" forward
 
