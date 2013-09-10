@@ -10,40 +10,6 @@ LIST_SEP="
 TMP_FASTD=/tmp/fastd
 FASTD_COMMAND=/usr/bin/fastd
 
-append_opt() {
-	local v="$1"; local p="$2"
-
-	OPTS="$OPTS --${p//_/-} '${v//'/\\'}'"
-}
-
-append_opt_bool() {
-	local p="$1"
-
-	OPTS="$OPTS --${p//_/-}"
-}
-
-append_opts() {
-	local p; local v; local s="$1"; shift
-	for p in $*; do
-		config_get v "$s" "$p"
-		[ -n "$v" ] && append_opt "$v" "$p"
-	done
-}
-
-append_opts_bool() {
-	local p; local v; local s="$1"; shift
-	for p in $*; do
-		config_get_bool v "$s" "$p" 0
-		[ "$v" = 1 ] && append_opt_bool "$p"
-	done
-}
-
-append_opts_list() {
-	local p; local s="$1"; shift
-	for p in $*; do
-		config_list_foreach "$s" "$p" append_opt "$p"
-	done
-}
 
 section_enabled() {
 	config_get_bool enabled "$1" 'enabled' 0
@@ -54,81 +20,226 @@ error() {
 	echo "${initscript}:" "$@" 1>&2
 }
 
-create_peer_config() {
-	local s="$2"; local peer="$1"
-
-	config_get net "$peer" net
-	[ "$net" == "$s" ] || return 0
-
-	section_enabled "$peer" || return 0
-
-	config_get key "$peer" key
-	config_get address "$peer" address
-	config_get hostname "$peer" hostname
-	config_get address_family "$peer" address_family
-	config_get port "$peer" port
-	config_get_bool float "$peer" float 0
-
-	if [ -z "$key" ]; then
-		error "peer $peer: key is not set"
-		return 1
-	fi
-
-	local remote=''
-	if [ "$address" -o "$hostname" ]; then
-		if [ "$address" -a "$hostname" ]; then
-			error "peer $peer: both address and hostname given"
-			return 1
-		fi
-
-		if [ "$float" = 0 ]; then
-			float=''
-		else
-			float='float'
-		fi
-
-		if [ "$port" ]; then
-			if [ "$address" ]; then
-				remote="remote $address port $port $float;"
-			else # $hostname
-				if [ "$address_family" -a "$address_family" != 'ipv4' -a "$address_family" != 'ipv6' ]; then
-					error "peer $peer: invalid address family given"
-					return 1
-				fi
-				remote="remote $address_family \"$hostname\" port $port $float;"
-			fi
-		else
-			error "peer $peer: address or hostname, but no port given"
-			return 1
-		fi
-	fi
-
-	cat > "$TMP_FASTD/fastd.$s.peers/$peer" <<EOF
-key "$key";
-$remote
-EOF
-}
-
-update_peers_instance() {
-	local s="$1"
-
-	rm -rf "$TMP_FASTD/fastd.$s.peers"
-	mkdir -p "$TMP_FASTD/fastd.$s.peers"
-
-	config_foreach create_peer_config 'peer' "$s"
-}
-
 get_key_instance() {
 	local s="$1"
 
 	config_get secret "$s" secret
 	if [ "$secret" = 'generate' ]; then
-		secret=`fastd --generate-key --machine-readable`
+		secret=`"$FASTD_COMMAND" --generate-key --machine-readable`
 		uci -q set fastd."$s".secret="$secret" && uci -q commit fastd
 	fi
 
 	echo "$secret"
 }
+
+
+escape_string() {
+	local t=${1//\\/\\\\}
+	echo -n "\"${t//\"/\\\"}\""
+}
+
+guard_value() {
+	local t=${1//[^-a-z0-9\[\].:]/}
+	echo -n "$t"
+}
+
+guard_remote() {
+	local t=${1//[^-a-zA-Z0-9\[\].:\"% ]/}
+	local quotes=${t//[^\"]/}
+	if [ "${#quotes}" = 0 -o "${#quotes}" = 2 ]; then
+		echo -n "$t"
+	fi
+}
+
+yes_no() {
+	case "$1" in
+		0|no|off|false|disabled) echo -n no;;
+		*) echo -n yes;;
+	esac
+}
+
+config_string_config='include $(escape_string "$value");'
+config_string_config_peer='include peer $(escape_string "$value");'
+config_string_config_peer_dir='include peers from $(escape_string "$value");'
+config_string_bind='bind $(guard_value "$value");'
+config_string_method='method $(escape_string "$value");'
+config_string_syslog_level='log to syslog level $(guard_value "$value");'
+config_string_mode='mode $(guard_value "$value");'
+config_string_interface='interface $(escape_string "$value");'
+config_string_mtu='mtu $(guard_value "$value");'
+config_string_peer_limit='peer limit $(guard_value "$value");'
+config_string_user='user $(escape_string "$value");'
+config_string_group='group $(escape_string "$value");'
+config_string_pmtu='pmtu $(yes_no "$value");'
+config_string_forward='forward $(yes_no "$value");'
+config_string_hide_ip_addresses='hide ip addresses $(yes_no "$value");'
+config_string_hide_mac_addresses='hide mac addresses $(yes_no "$value");'
+
+config_string_peer='peer $(escape_string "$value") {'
+config_string_peer_group='peer group $(escape_string "$value") {'
+
+peer_string_key='key $(escape_string "$value");'
+peer_string_float='float $(yes_no "$value");'
+peer_string_remote='remote $(guard_remote "$value");'
+
+generate_option() {
+	local __string=$(eval echo \"\$$2\")
+	local value="$1";
+	eval echo "\"$__string\""
+}
+
+append_option() {
+	local v; local len; local s="$1"; local prefix="$2"; local p="$3"
+
+	config_get len "$s" "${p}_LENGTH"
+
+	if [ -z "$len" ]; then
+		config_get v "$s" "$p"
+		[ -n "$v" ] && generate_option "$v" "${prefix}_string_${p}"
+	else
+		config_list_foreach "$s" "$p" generate_option "${prefix}_string_${p}"
+	fi
+}
+
+append_options() {
+	local p; local s="$1"; local prefix="$2"; shift; shift
+	for p in $*; do
+		append_option "$s" "$prefix" "$p"
+	done
+}
+
+
+generate_config_secret() {
+	echo "secret $(escape_string "$1");"
+}
+
+
+generate_peer_config() {
+	local peer="$1"
+
+	# These options are deprecated
+	config_get address "$peer" address
+	config_get hostname "$peer" hostname
+	config_get address_family "$peer" address_family
+	config_get port "$peer" port
+
+	if [ "$address" -o "$hostname" ]; then
+		if [ -z "$port" ]; then
+			error "peer $peer: address or hostname, but no port given"
+			return 1
+		fi
+
+		if [ "$hostname" ]; then
+			generate_option peer_string_remote "$address_family \"$hostname\" port $port"
+		fi
+
+		if [ "$address" ]; then
+			generate_option peer_string_remote "$address port $port"
+		fi
+	fi
+
+	append_options "$peer" peer \
+		key float remote
+}
+
+generate_single_peer_config() {
+	local peer="$1"; local net="$2"
+
+	config_get peer_net "$peer" net
+	config_get peer_group "$peer" group
+	[ "$net" = "$peer_net" -a "$peer_group" = '' ] || return 0
+
+	section_enabled "$peer" || return 0
+
+	generate_option "$peer" config_string_peer
+	generate_peer_config "$peer"
+	echo '}'
+}
+
+create_peer_config() {
+	local peer="$1"; local net="$2"; local group="$3"; local path="$4"
+
+	config_get peer_net "$peer" net
+	config_get peer_group "$peer" group
+	[ "$group" = "$peer_group" ] || return 0
+
+	if [ "$net" != "$peer_net" ]; then
+		[ -z "$group" ] || error "warning: the peer group of peer '$peer' doesn't match its net, the peer will be ignored"
+		return 0
+	fi
+
+	section_enabled "$peer" || return 0
+
+	generate_peer_config "$peer" >"$path/$peer"
+}
+
+update_peer_group() {
+	local net="$1"; local group_dir="$2"; local group="$3"; local update_only="$4"
+	local path="$TMP_FASTD/fastd.$net/$group_dir"
+
+	rm -rf "$path"
+	mkdir -p "$path"
+
+	config_foreach create_peer_config 'peer' "$net" "$group" "$path"
+
+	if [ -z "$update_only" ]; then
+		generate_option "$path" config_string_config_peer_dir
+	fi
+
+	config_foreach generate_peer_group_config 'peer_group' "$net" "$group_dir" "$update_only" "$group"
+}
+
+generate_peer_group_config() {
+	local group="$1"; local net="$2"; local group_dir="$3%$group"; local update_only="$4"; local parent="$5"
+
+	config_get group_net "$group" net
+	config_get group_parent "$group" parent
+	[ "$parent" = "$group_parent" ] || return 0
+
+	if [ "$net" != "$peer_net" ]; then
+		[ -z "$parent" ] || error "warning: the parent of peer group '$group' doesn't match its net, the peer group will be ignored"
+		return 0
+	fi
+
+	section_enabled "$group" || return 0
+
+	if [ -z "$update_only" ]; then
+		generate_option "$group" config_string_peer_group
+		append_options "$group" config \
+			config config_peer config_peer_dir peer_limit
+	fi
+
+	update_peer_group "$net" "$group_dir" "$group" "$update_only"
+
+	if [ -z "$update_only" ]; then
+		echo '}'
+	fi
+}
+
+update_peer_groups() {
+	local net="$1"; local update_only="$2"
+
+	update_peer_group "$net" 'peers' '' "$update_only"
+}
+
+generate_config() {
+	local s="$1"
+
+	generate_option 'info' config_string_syslog_level
+
+	append_options "$s" config \
+		config config_peer config_peer_dir bind method syslog_level mode interface mtu peer_limit \
+		user group pmtu forward hide_ip_addresses hide_mac_addresses
+
+	config_get mode "$s" mode
+
+	if [ "$mode" = "tun" ]; then
+		config_foreach generate_single_peer_config 'peer' "$s"
+	else
+		update_peer_groups "$s"
+	fi
+}
+
 
 generate_key_instance() {
 	local s="$1"
@@ -139,9 +250,7 @@ generate_key_instance() {
 		uci -q set fastd."$s".secret="$secret" && uci -q commit fastd
 	fi
 
-	"$FASTD_COMMAND" --config - --show-key --machine-readable <<EOF
-secret "$secret";
-EOF
+	generate_config_secret "$secret" | "$FASTD_COMMAND" --config - --show-key --machine-readable
 }
 
 show_key_instance() {
@@ -153,9 +262,7 @@ show_key_instance() {
 		return 1
 	fi
 
-	"$FASTD_COMMAND" --config - --show-key --machine-readable <<EOF
-secret "$secret";
-EOF
+	generate_config_secret "$secret" | "$FASTD_COMMAND" --config - --show-key --machine-readable
 }
 
 start_instance() {
@@ -164,7 +271,6 @@ start_instance() {
 	section_enabled "$s" || return 1
 
 	SERVICE_PID_FILE="/var/run/fastd.$s.pid"
-	OPTS=""
 
 	config_get interface "$s" interface
 	if [ -z "$interface" ]; then
@@ -177,21 +283,19 @@ start_instance() {
 		return 1
 	fi
 
+	config_get mode "$s" mode
+	if [ -z "$mode" ]; then
+		error "$s: mode is not set"
+		return 1
+	fi
+
 	local secret=`get_key_instance "$s"`
 	if [ -z "$secret" ]; then
 		error "$s: secret is not set"
 		return 1
 	fi
 
-	append_opts_list "$s" config config_peer_dir config_peer bind method
-	append_opts "$s" syslog_level mode interface mtu
-	append_opts_bool "$s" forward
-
-	update_peers_instance "$s"
-
-	eval service_start "'$FASTD_COMMAND'" --daemon --pid-file "'$SERVICE_PID_FILE'" --syslog-level info $OPTS --config-peer-dir "$TMP_FASTD/fastd.$s.peers" --config - <<EOF
-secret "$secret";
-EOF
+	(generate_config_secret "$secret"; generate_config "$s") | service_start "$FASTD_COMMAND" --config - --daemon --pid-file "$SERVICE_PID_FILE"
 
 	if ! ifconfig "$interface" >/dev/null 2>&1; then
 		error "$s: startup failed"
@@ -225,18 +329,21 @@ stop_instance() {
 
 	service_stop "$FASTD_COMMAND"
 
-	rm -rf "$TMP_FASTD/fastd.$s.peers"
+	rm -rf "$TMP_FASTD/fastd.$s"
 }
 
 reload_instance() {
-        local s="$1"
+	local s="$1"
 
-        section_enabled "$s" || return 1
+	section_enabled "$s" || return 1
 
-	update_peers_instance "$s"
+	config_get mode "$s" mode
+	[ "$mode" = "tun" ] && return 1
 
-        SERVICE_PID_FILE="/var/run/fastd.$s.pid"
-        service_reload "$FASTD_COMMAND"
+	update_peer_groups "$s" true
+
+	SERVICE_PID_FILE="/var/run/fastd.$s.pid"
+	service_reload "$FASTD_COMMAND"
 }
 
 start() {
@@ -250,8 +357,8 @@ stop() {
 }
 
 reload() {
-        config_load 'fastd'
-        config_foreach reload_instance 'fastd'
+	config_load 'fastd'
+	config_foreach reload_instance 'fastd'
 }
 
 up() {
