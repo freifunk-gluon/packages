@@ -1,35 +1,63 @@
 menu "Configuration"
 	depends on PACKAGE_fastd
 
+config FASTD_ENABLE_METHOD_CIPHER_TEST
+	bool "Enable cipher-test method provider"
+	depends on PACKAGE_fastd
+	default n
+
+config FASTD_ENABLE_METHOD_COMPOSED_GMAC
+	bool "Enable composed-gmac method provider"
+	depends on PACKAGE_fastd
+	default y
+
+config FASTD_ENABLE_METHOD_GENERIC_GMAC
+	bool "Enable generic-gmac method provider"
+	depends on PACKAGE_fastd
+	default y
+
+config FASTD_ENABLE_METHOD_GENERIC_POLY1305
+	bool "Enable generic-poly1305 method provider"
+	depends on PACKAGE_fastd
+	default n
+
+config FASTD_ENABLE_METHOD_NULL
+	bool "Enable null method"
+	depends on PACKAGE_fastd
+	default y
+
 config FASTD_ENABLE_METHOD_XSALSA20_POLY1305
 	bool "Enable xsalsa20-poly1305 method"
 	depends on PACKAGE_fastd
-	default y
-
-config FASTD_ENABLE_METHOD_AES128_GCM
-	bool "Enable aes128-gcm method"
-	depends on PACKAGE_fastd && (FASTD_ENABLE_CRYPTO_AES128CTR_NACL || FASTD_ENABLE_CRYPTO_AES128CTR_LINUX) && (FASTD_ENABLE_CRYPTO_GHASH_BUILTIN || FASTD_ENABLE_CRYPTO_GHASH_LINUX)
 	default n
 
-config FASTD_ENABLE_CRYPTO_AES128CTR_NACL
-	bool "Include the AES128-CTR implementation from the NaCl library"
-	depends on PACKAGE_fastd
-	default y
 
-config FASTD_ENABLE_CRYPTO_AES128CTR_LINUX
-	bool "Support using the AES128-CTR implementation in the Linux kernel"
+config FASTD_ENABLE_CIPHER_AES128_CTR
+	bool "Enable the AES128-CTR cipher"
 	depends on PACKAGE_fastd
 	default n
 
-config FASTD_ENABLE_CRYPTO_GHASH_BUILTIN
-	bool "Include the built-in GHASH implementation"
+config FASTD_ENABLE_CIPHER_NULL
+	bool "Enable the null cipher"
 	depends on PACKAGE_fastd
 	default y
 
-config FASTD_ENABLE_CRYPTO_GHASH_LINUX
-	bool "Support using the GHASH implementation in the Linux kernel"
+config FASTD_ENABLE_CIPHER_SALSA20
+	bool "Enable the Salsa20 cipher"
 	depends on PACKAGE_fastd
 	default n
+
+config FASTD_ENABLE_CIPHER_SALSA2012
+	bool "Enable the Salsa20/12 cipher"
+	depends on PACKAGE_fastd
+	default y
+
+
+config FASTD_ENABLE_MAC_GHASH
+	bool "Enable the GHASH message authentication code"
+	depends on PACKAGE_fastd
+	default y
+
 
 config FASTD_WITH_CMDLINE_USER
 	bool "Include support for setting user/group related options on the command line"

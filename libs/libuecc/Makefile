@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libuecc
-PKG_VERSION:=3
+PKG_VERSION:=4
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
-PKG_SOURCE_URL:=https://projects.universe-factory.net/attachments/download/42
-PKG_MD5SUM:=3c45ffecc7709ea929892993808e218e
+PKG_SOURCE_URL:=https://projects.universe-factory.net/attachments/download/71
+PKG_MD5SUM:=7f44df5dc69cb8686947562e2a11eea9
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
@@ -25,8 +25,11 @@ define Package/libuecc
   URL:=http://git.universe-factory.net/libuecc/
 endef
 
+TARGET_CFLAGS += -ffunction-sections -fdata-sections
+
 CMAKE_OPTIONS += \
 	-DCMAKE_BUILD_TYPE:String="MINSIZEREL"
+
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include
