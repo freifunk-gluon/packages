@@ -71,11 +71,7 @@ manifest_lower=$(mktemp)
 
 wget -O$manifest "$BASE"/manifest || fail "Couldn't fetch manifest"
 
-seperator_line=$(cat $manifest|grep -n "^---$"|cut -d: -f1|head -n1) || \
-  fail "Could't find --- marker!"
-
-head -n$(($seperator_line-1)) $manifest > $manifest_upper
-tail -n+$(($seperator_line+1)) $manifest > $manifest_lower
+awk 'BEGIN { sep=0 } /^---$/ { sep=1; next } { if(sep==0) print; else print > "'$manifest_lower'" }' $manifest > $manifest_upper
 
 signatures=""
 while read sig; do
