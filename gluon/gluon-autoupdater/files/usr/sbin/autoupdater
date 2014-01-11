@@ -37,7 +37,9 @@ cleanup() {
 
 trap cleanup INT TERM EXIT PIPE
 
-my_model="$(cat /tmp/sysinfo/model | sed 's/ /-/g' | tr '[A-Z]' '[a-z]')"
+. /lib/ar71xx.sh
+
+my_model="$(ar71xx_board_name)"
 
 case "$my_model" in
   "tl-wdr4300")
