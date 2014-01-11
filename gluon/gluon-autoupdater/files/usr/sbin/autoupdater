@@ -13,8 +13,7 @@ BRANCH=$(uci get autoupdater.settings.branch)
 PROBABILITY=$(uci get autoupdater.${BRANCH}.probability)
 
 if test "a$1" != "a-f"; then
-  echo | awk "END{srand();exit rand() > $PROBABILITY}"
-  if test $? -ne 0; then
+  if ! echo | awk "END{srand();exit rand() > $PROBABILITY}"; then
     echo "No autoupdate this time. Use -f to override"
     exit 0
   fi
