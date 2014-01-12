@@ -32,10 +32,10 @@ newer_than() {
 }
 
 cleanup() {
-  rm -f $manifest
-  rm -f $fw_image
-  rm -f $manifest_upper
-  rm -f $manifest_lower
+  [ -f "$manifest" ] && rm -f "$manifest"
+  [ -f "$fw_image" ] && rm -f "$fw_image"
+  [ -f "$manifest_upper" ] && rm -f "$manifest_upper"
+  [ -f "$manifest_lower" ] && rm -f "$manifest_lower"
 }
 
 fail() {
