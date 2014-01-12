@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# abort on error
+set -e
+
 if test $(uci get autoupdater.settings.enabled) != 1; then
   echo "autoupdater is disabled"
   exit 0
@@ -10,15 +13,15 @@ BRANCH=$(uci get autoupdater.settings.branch)
 PROBABILITY=$(uci get autoupdater.${BRANCH}.probability)
 
 if test "a$1" != "a-f"; then
-  echo | awk "END{srand();exit rand() > $PROBABILITY}"
-  if test $? -ne 0; then
+  if ! echo | awk "END{srand();exit rand() > $PROBABILITY}"; then
     echo "No autoupdate this time. Use -f to override"
     exit 0
   fi
 fi
 
 BASE=$(uci get autoupdater.${BRANCH}.url)
-PUBKEYS=$(uci get autoupdater.${BRANCH}.pubkey)
+# if no signatures are needed, no pubkeys need to be defined, so don't fail
+PUBKEYS=$(uci get autoupdater.${BRANCH}.pubkey) || true
 GOOD_SIGNATURES=$(uci get autoupdater.${BRANCH}.good_signatures)
 
 VERSION_FILE=/lib/gluon/release
@@ -29,15 +32,22 @@ newer_than() {
 }
 
 cleanup() {
-  rm -f $manifest
-  rm -f $fw_image
-  rm -f $manifest_upper
-  rm -f $manifest_lower
+  [ -f "$manifest" ] && rm -f "$manifest"
+  [ -f "$fw_image" ] && rm -f "$fw_image"
+  [ -f "$manifest_upper" ] && rm -f "$manifest_upper"
+  [ -f "$manifest_lower" ] && rm -f "$manifest_lower"
+}
+
+fail() {
+  echo "$@" >&2
+  exit 1
 }
 
 trap cleanup INT TERM EXIT PIPE
 
-my_model="$(cat /tmp/sysinfo/model | sed 's/ /-/g' | tr '[A-Z]' '[a-z]')"
+. /lib/ar71xx.sh
+
+my_model="$(ar71xx_board_name)"
 
 case "$my_model" in
   "tl-wdr4300")
@@ -49,10 +59,7 @@ case "$my_model" in
     ;;
 esac
 
-if [ ! -f "$VERSION_FILE" ]; then
-  echo "Couldn't determine firmware version!" >&2
-  exit 1
-fi
+[ -f "$VERSION_FILE" ] || fail "Couldn't determine firmware version!"
 
 my_version="$(cat "$VERSION_FILE")"
 
@@ -61,22 +68,9 @@ manifest=$(mktemp)
 manifest_upper=$(mktemp)
 manifest_lower=$(mktemp)
 
-wget -O$manifest "$BASE"/manifest
+wget -O$manifest "$BASE"/manifest || fail "Couldn't fetch manifest"
 
-if test $? -ne 0; then
-  echo "Couldn't fetch manifest" >&2
-  exit 1
-fi
-
-seperator_line=$(cat $manifest|grep -n "^---$"|cut -d: -f1|head -n1)
-
-if test -z "$seperator_line"; then
-  echo "Couldn't find --- marker!" >&2
-  exit 1
-fi
-
-head -n$(($seperator_line-1)) $manifest > $manifest_upper
-tail -n+$(($seperator_line+1)) $manifest > $manifest_lower
+awk 'BEGIN { sep=0 } /^---$/ { sep=1; next } { if(sep==0) print; else print > "'$manifest_lower'" }' $manifest > $manifest_upper
 
 signatures=""
 while read sig; do
@@ -92,26 +86,12 @@ for key in $PUBKEYS; do
   pubkeys="$pubkeys -p $key"
 done
 
-ecdsaverify -n $GOOD_SIGNATURES $pubkeys $signatures $manifest_upper
+ecdsaverify -n $GOOD_SIGNATURES $pubkeys $signatures $manifest_upper || \
+  fail "Not enough valid signatures!"
 
-if test $? -ne 0; then
-  echo "Not enough valid signatures!" >&2
-  exit 1
-fi
+grep -q "^BRANCH=${BRANCH}$" $manifest_upper || fail "Wrong branch. We'are on ${BRANCH}"
 
-grep -q "^BRANCH=${BRANCH}$" $manifest_upper
-
-if test $? -ne 0; then
-  echo "Wrong branch. We'are on ${BRANCH}" >&2
-  exit 1
-fi
-
-my_firmware=$(grep "^${my_model} " $manifest_upper)
-
-if test $? -ne 0; then
-  echo "No matching firmware found (model ${my_model})" >&2
-  exit 1
-fi
+my_firmware=$(grep "^${my_model} " $manifest_upper) || fail "No matching firmware found (model ${my_model})"
 
 fw_version=$(echo "${my_firmware}"|cut -d' ' -f2)
 fw_md5=$(echo "${my_firmware}"|cut -d' ' -f3)
@@ -119,16 +99,11 @@ fw_file=$(echo "${my_firmware}"|cut -d' ' -f4)
 
 if newer_than "$fw_version" "$my_version"; then
   echo "New version available"
-  wget -O$fw_image "${BASE}/${fw_file}"
-  if test $? -ne 0; then
-    echo "Error downloading image" >&2
-    exit 1
-  fi
+  wget -O$fw_image "${BASE}/${fw_file}" || fail "Error downloading image"
 
   image_md5=$(md5sum "$fw_image"|cut -b-32)
   if test "$image_md5" != "$fw_md5"; then
-    echo "Invalid image checksum" >&2
-    exit 1
+    fail "Invalid image checksum"
   fi
 
   echo "Upgrading firmware."
