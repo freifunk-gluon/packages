@@ -296,6 +296,14 @@ start_instance() {
 		return 1
 	fi
 
+	rm -f "$SERVICE_PID_FILE"
+	touch "$SERVICE_PID_FILE"
+
+	config_get user "$s" user
+	if [ "$user" ]; then
+		chown "$user" "$SERVICE_PID_FILE"
+	fi
+
 	(generate_config_secret "$secret"; generate_config "$s") | service_start "$FASTD_COMMAND" --config - --daemon --pid-file "$SERVICE_PID_FILE"
 
 	if ! ifconfig "$interface" >/dev/null 2>&1; then
