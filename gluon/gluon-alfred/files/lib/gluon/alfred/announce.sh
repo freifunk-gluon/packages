@@ -12,10 +12,19 @@ fi
 . /lib/gluon/functions/model.sh
 . /lib/gluon/functions/sysconfig.sh
 
+# set defaults
 [ -z "$ALFRED_DATA_TYPE" ] && ALFRED_DATA_TYPE=158
 [ -z "$NET_IF" ] && NET_IF=br-client
+[ -z "$MAX_WAIT" ] && MAX_WAIT=299
 
 set -e
+
+# To avoid mass flooding the network every five minutes with all clients
+# simultaneously, wait for a random time between 0 and 300 seconds, but fixed
+# for each device to maintain 5 minutes between updates.
+# Calculated using first 3 hex digits of the primary MAC address' MD5 hash
+DELAY=$((0x$(sysconfig primary_mac | md5sum | head -c3) * $MAX_WAIT / (16**3)))
+sleep $DELAY
 
 json_init
 json_add_string "hostname" "$(uci get 'system.@system[0].hostname')"
@@ -60,5 +69,13 @@ json_add_object "network"
 		done
 	json_close_array # adresses
 json_close_object # network
+
+json_add_object "statistics"
+	json_add_int "uptime" "$(cut -d' ' -f1 /proc/uptime)"
+	json_add_object "traffic"
+		json_add_double "rx" "$(cat /sys/class/net/bat0/statistics/rx_bytes)"
+		json_add_double "tx" "$(cat /sys/class/net/bat0/statistics/tx_bytes)"
+	json_close_object # traffic
+json_close_object # statistics
 
 json_dump | tr -d '\n' | alfred -s "$ALFRED_DATA_TYPE"
