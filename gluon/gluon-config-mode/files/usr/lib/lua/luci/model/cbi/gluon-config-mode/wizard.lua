@@ -51,6 +51,7 @@ o.datatype = "integer"
 s = f:section(SimpleSection, nil, [[Um deinen Knoten auf der Karte anzeigen
 zu können benötigen wir seine Koordinaten. Hier hast du die Möglichkeit
 diese zu hinterlegen.]])
+s.template = "gluon-config-mode/cbi/map"
 
 o = s:option(Flag, "_location", "Knoten auf der Karte anzeigen")
 o.default = uci:get_first("gluon-locaton", "location", "share_location", o.disabled)

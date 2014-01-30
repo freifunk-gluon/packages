@@ -1,0 +1,98 @@
+<fieldset class="cbi-section">
+        <% if self.title and #self.title > 0 then -%>
+                <legend><%=self.title%></legend>
+        <%- end %>
+        <% if self.description and #self.description > 0 then -%>
+                <div class="cbi-section-descr"><%=self.description%></div>
+        <%- end %>
+        <div class="cbi-section-node" id="cbi-<%=self.config%>-<%=tostring(self):sub(8)%>">
+                <div>
+                        <% self:render_children(1, scope or {}) %>
+                </div>
+                <% if self.error and self.error[1] then -%>
+                        <div class="cbi-section-error">
+                                <ul><% for _, e in ipairs(self.error[1]) do -%>
+                                        <li>
+                                                <%- if e == "invalid" then -%>
+                                                        <%:One or more fields contain invalid values!%>
+                                                <%- elseif e == "missing" then -%>
+                                                        <%:One or more required fields have no value!%>
+                                                <%- else -%>
+                                                        <%=pcdata(e)%>
+                                                <%- end -%>
+                                        </li>
+                                <%- end %></ul>
+                        </div>
+                <%- end %>
+                <script src='https://api.tiles.mapbox.com/mapbox.js/v1.6.1/mapbox.js'></script>
+                <link href='https://api.tiles.mapbox.com/mapbox.js/v1.6.1/mapbox.css' rel='stylesheet' />
+
+                <style>
+                  #map {
+                    width: 100%;
+                    height: 400px;
+                  }
+                </style>
+
+                <div id='map'></div>
+
+                <script>
+
+                function showmap() {
+                  document.getElementById('cbi-wizard-1-_latitude').style.display = 'none';
+                  document.getElementById('cbi-wizard-1-_longitude').style.display = 'none';
+
+                  var tiles ={
+                      "scheme": "xyz",
+                      "tiles": [
+                        "http://otile1.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.png",
+                        "http://otile2.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.png",
+                        "http://otile3.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.png"
+                        ],
+                      "minzoom": 0,
+                      "maxzoom": 18,
+                      "bounds": [ -180, -85, 180, 85 ],
+                      "center": [ 0, 0, 2 ]
+                  }
+
+                  var start = new L.LatLng(
+                          document.getElementById('cbid.wizard.1._latitude').value,
+                          document.getElementById('cbid.wizard.1._longitude').value
+                        );
+                  var initial_zoom = 16;
+
+                  var map = L.mapbox.map('map', tiles).setView(start, initial_zoom);
+
+                  var marker = L.marker(start, {
+                    icon: L.mapbox.marker.icon({'marker-color': 'CC0033'}),
+                    draggable: true
+                  });
+
+                  marker.addTo(map);
+                  marker.on('dragend', function () {
+                        var latlng = this.getLatLng();
+                        document.getElementById('cbid.wizard.1._location').checked = true;
+                        document.getElementById('cbid.wizard.1._latitude').value = latlng.lat;
+                        document.getElementById('cbid.wizard.1._longitude').value = latlng.lng;
+                      });
+
+                  map._onResize();
+                }
+
+                if (typeof L !== 'undefined')
+                  showmap()
+
+                </script>
+        </div>
+        <br />
+</fieldset>
+<%-
+        if type(self.hidden) == "table" then
+                for k, v in pairs(self.hidden) do
+-%>
+        <input type="hidden" id="<%=k%>" name="<%=k%>" value="<%=pcdata(v)%>" />
+<%-
+                end
+        end
+%>
+
