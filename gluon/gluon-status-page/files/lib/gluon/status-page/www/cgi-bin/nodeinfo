@@ -1,0 +1,7 @@
+#!/bin/sh
+
+echo 'Access-Control-Allow-Origin: *'
+echo 'Content-Type: application/json'
+echo
+
+exec /lib/gluon/announce/collect.lua nodeinfo

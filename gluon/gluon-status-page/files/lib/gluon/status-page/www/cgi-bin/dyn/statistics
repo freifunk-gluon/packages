@@ -1,0 +1,14 @@
+#!/usr/bin/lua
+
+local util = require 'luci.util'
+local nixio = require 'nixio'
+
+io.write("Access-Control-Allow-Origin: *\n")
+io.write("Content-type: text/event-stream\n\n")
+
+while true do
+  local data = util.exec("/lib/gluon/announce/collect.lua statistics")
+  io.write("data: " .. data .. "\n\n")
+  io.flush()
+  nixio.nanosleep(1, 0)
+end
