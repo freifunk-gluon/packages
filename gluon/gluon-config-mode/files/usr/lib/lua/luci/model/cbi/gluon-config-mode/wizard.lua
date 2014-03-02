@@ -22,6 +22,8 @@ o = s:option(Flag, "_autoupdate", "Firmware automatisch aktualisieren")
 o.default = uci:get_bool("autoupdater", "settings", "enabled") and o.enabled or o.disabled
 o.rmempty = false
 
+--
+
 s = f:section(SimpleSection, nil, [[Falls du deinen Knoten über das Internet
 mit Freifunk verbinden möchtest, kannst du hier das Mesh-VPN aktivieren.
 Solltest du dich dafür entscheiden, hast du die Möglichkeit die dafür
@@ -48,6 +50,8 @@ o.value = uci:get("gluon-simple-tc", meshvpn_name, "limit_egress")
 o.rmempty = false
 o.datatype = "integer"
 
+--
+
 s = f:section(SimpleSection, nil, [[Um deinen Knoten auf der Karte anzeigen
 zu können, benötigen wir seine Koordinaten. Hier hast du die Möglichkeit,
 diese zu hinterlegen.]])
@@ -67,6 +71,19 @@ o.default = uci:get_first("gluon-node-info", "location", "longitude", 0)
 o.rmempty = false
 o.datatype = "float"
 o.description = "z.B. 10.689901"
+
+--
+
+s = f:section(SimpleSection, nil, [[Um anderen Freifunkern die Möglichkeit zu geben,
+dich zu kontaktieren, hast du hier die Möglichkeit, einen <em><strong>öffentlichen</strong></em> Hinweis
+zu hinterlegen, wie man dich erreichen kann.]])
+
+o = s:option(Value, "_contact", "Kontakt")
+o.default = string.format("%s", uci:get_first("gluon-node-info", "owner", "contact", ""))
+o.rmempty = false
+o.datatype = "string"
+o.description = "z.B. E-Mail, Telefon, Chat-Name oder Kontakt-Webseite"
+o.maxlen = 140
 
 function f.handle(self, state, data)
   if state == FORM_VALID then
@@ -107,6 +124,9 @@ function f.handle(self, state, data)
             uci:set("gluon-node-info", s[".name"], "share_location", data._location)
             uci:set("gluon-node-info", s[".name"], "latitude", data._latitude)
             uci:set("gluon-node-info", s[".name"], "longitude", data._longitude)
+            end)
+    uci:foreach("gluon-node-info", "owner", function(s)
+            uci:set("gluon-node-info", s[".name"], "contact", data._contact)
             end)
     uci:save("gluon-node-info")
     uci:commit("gluon-node-info")
