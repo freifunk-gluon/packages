@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=fastd
-PKG_VERSION:=11
-PKG_RELEASE:=3
+PKG_VERSION:=12
+PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
-PKG_SOURCE_URL:=https://projects.universe-factory.net/attachments/download/72
-PKG_MD5SUM:=bdd89fc171c4d961169ff231c1198f12
+PKG_SOURCE_URL:=https://projects.universe-factory.net/attachments/download/73
+PKG_MD5SUM:=1dadc61f4d712a10844afcb9b9f49a41
 
 PKG_CONFIG_DEPENDS:=\
 	CONFIG_FASTD_ENABLE_METHOD_CIPHER_TEST \
