@@ -110,6 +110,13 @@ append_options() {
 	done
 }
 
+append_custom_configs() {
+	local fastd_configs=/etc/fastd/
+	for f in $(ls $fastd_configs)
+	do
+		eval echo 'include \"$fastd_configs$f\"\;'
+	done
+}
 
 generate_config_secret() {
 	echo "secret $(escape_string "$1");"
@@ -305,7 +312,7 @@ start_instance() {
 		chown "$user" "$SERVICE_PID_FILE"
 	fi
 
-	(generate_config_secret "$secret"; generate_config "$s") | service_start "$FASTD_COMMAND" --config - --daemon --pid-file "$SERVICE_PID_FILE"
+	(generate_config_secret "$secret"; generate_config "$s"; append_custom_configs) | service_start "$FASTD_COMMAND" --config - --daemon --pid-file "$SERVICE_PID_FILE"
 
 	if ! ifconfig "$interface" >/dev/null 2>&1; then
 		error "$s: startup failed"

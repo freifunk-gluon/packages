@@ -62,21 +62,21 @@ config FASTD_ENABLE_MAC_GHASH
 config FASTD_WITH_CMDLINE_USER
 	bool "Include support for setting user/group related options on the command line"
 	depends on PACKAGE_fastd
-	default n
+	default y
 
 config FASTD_WITH_CMDLINE_LOGGING
 	bool "Include support for setting logging related options on the command line"
 	depends on PACKAGE_fastd
-	default n
+	default y
 
 config FASTD_WITH_CMDLINE_OPERATION
 	bool "Include support for setting options related to the VPN operation (like mode, interface, encryption method) on the command line"
 	depends on PACKAGE_fastd
-	default n
+	default y
 
 config FASTD_WITH_CMDLINE_COMMANDS
 	bool "Include support for setting handler scripts (e.g. --on-up) on the command line"
 	depends on PACKAGE_fastd
-	default n
+	default y
 
 endmenu
