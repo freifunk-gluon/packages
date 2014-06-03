@@ -1,0 +1,29 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+config_load firewall
+reject_input_on_wan() {
+       config_get name "$1" name
+       [ "$name" = 'wan' ] && uci_set firewall "$1" input 'REJECT'
+}
+config_foreach reject_input_on_wan 'zone'
+
+uci_remove firewall wan_ssh
+uci_add firewall rule wan_ssh
+uci_set firewall wan_ssh name 'wan_ssh'
+uci_set firewall wan_ssh src 'wan'
+uci_set firewall wan_ssh dest_port '22'
+uci_set firewall wan_ssh proto 'tcp'
+uci_set firewall wan_ssh family 'ipv4'
+uci_set firewall wan_ssh target 'ACCEPT'
+
+uci_remove firewall wan_ssh6
+uci_add firewall rule wan_ssh6
+uci_set firewall wan_ssh6 name 'wan_ssh6'
+uci_set firewall wan_ssh6 src 'wan'
+uci_set firewall wan_ssh6 dest_port '22'
+uci_set firewall wan_ssh6 proto 'tcp'
+uci_set firewall wan_ssh6 family 'ipv6'
+uci_set firewall wan_ssh6 target 'ACCEPT'
+uci_commit firewall
