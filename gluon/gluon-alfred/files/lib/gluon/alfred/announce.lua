@@ -63,6 +63,9 @@ if fastd then
     }
 end
 
+output["software"]["batman"] =
+  { version = chomp(util.exec("batctl -v | cut -d ' ' -f2")) }
+
 output["hardware"] =
   { model = chomp(util.exec(". /lib/gluon/functions/model.sh; get_model")) }
 
@@ -105,9 +108,18 @@ for _,class in ipairs({"rx", "tx", "forward", "mgmt_rx", "mgmt_tx"}) do
 end
 
 output["statistics"] =
-  { uptime = chomp(util.exec("cut -d' ' -f1 /proc/uptime"))
+  { idletime = chomp(util.exec("cat /proc/uptime | cut -d ' ' -f2"))
+  , uptime = chomp(util.exec("cut -d' ' -f1 /proc/uptime"))
   , loadavg = chomp(util.exec("cut -d' ' -f1 /proc/loadavg"))
+  , prossece = chomp(util.exec("cat /proc/loadavg | cut -d ' ' -f4"))
   , traffic = traffic
+  }
+
+output["statistics"]["Memory"] =
+  { total = chomp(util.exec("awk '/MemTotal/ { printf( $2 ) }'/proc/meminfo"))
+  , free = chomp(util.exec("awk '/MemFree/ { printf( $2 ) }'/proc/meminfo"))
+  , buffers = chomp(util.exec("awk '/Buffers/ { printf( $2 ) }'/proc/meminfo"))
+  , cached = chomp(util.exec("awk '/Cached/ { printf( $2 ) }'/proc/meminfo"))
   }
 
 encoder = json.Encoder(output)
