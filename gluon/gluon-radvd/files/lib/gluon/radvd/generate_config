@@ -10,5 +10,6 @@ interface br-client
 	AdvDefaultLifetime 0;
 
 	prefix ]] .. site.prefix6 .. [[ {};
+	RDNSS ]] .. site.next_node.ip6 .. [[ {};
 };
 ]])
