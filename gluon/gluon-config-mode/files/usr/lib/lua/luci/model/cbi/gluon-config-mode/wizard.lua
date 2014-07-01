@@ -18,9 +18,14 @@ o.value = uci:get_first("system", "system", "hostname")
 o.rmempty = false
 o.datatype = "hostname"
 
-o = s:option(Flag, "_autoupdate", "Firmware automatisch aktualisieren")
-o.default = uci:get_bool("autoupdater", "settings", "enabled") and o.enabled or o.disabled
-o.rmempty = false
+if uci:get_bool("autoupdater", "settings", "enabled")  then
+  f:set(nil, "autoupdater_msg", [[Dieser Knoten aktualisiert seine Firmware <b>automatisch</b>,
+  sobald eine neue Version vorliegt. Falls du dies nicht möchtest,
+  kannst du die Funktion im <i>Expertmode</i> deaktivieren.]])
+else
+  f:set(nil, "autoupdater_msg", [[Dieser Knoten aktualisiert seine Firmware <b>nicht automatisch</b>.
+  Diese Funktion kannst du im <i>Expertmode</i> aktivieren.]])
+end
 
 s = f:section(SimpleSection, nil, [[Falls du deinen Knoten über das Internet
 mit Freifunk verbinden möchtest, kannst du hier das Mesh-VPN aktivieren.
@@ -86,10 +91,6 @@ o.maxlen = 140
 function f.handle(self, state, data)
   if state == FORM_VALID then
     local stat = false
-
-    uci:set("autoupdater", "settings", "enabled", data._autoupdate)
-    uci:save("autoupdater")
-    uci:commit("autoupdater")
 
     -- checks for nil needed due to o:depends(...)
     if data._limit_enabled ~= nil then
