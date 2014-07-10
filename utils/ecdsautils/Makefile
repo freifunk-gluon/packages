@@ -10,10 +10,12 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=ecdsautils
 PKG_VERSION:=0.2
 PKG_RELEASE:=1
-
-PKG_SOURCE:=v$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://github.com/tcatm/ecdsautils/archive/
-PKG_MD5SUM:=bd170e48f045d62b0b4d22c26c1a3f2a
+PKG_REV:=v$(PKG_VERSION)
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_URL:=git://github.com/tcatm/$(PKG_NAME).git
+PKG_SOURCE_VERSION:=$(PKG_REV)
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_PROTO:=git
 
 PKG_BUILD_DEPENDS:=libuecc
 
