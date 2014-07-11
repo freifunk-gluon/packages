@@ -12,7 +12,7 @@ define Package/lua-platform-info
   SECTION:=luci
   CATEGORY:=LuCi
   TITLE:=Lua hardware platform information library
-  DEPENDS:=lua @TARGET_ar71xx_generic
+  DEPENDS:=+lua @TARGET_ar71xx_generic
 endef
 
 define Package/lua-platform-info/description
