@@ -35,13 +35,13 @@ newer_than() {
 }
 
 fetch_manifest() {
-  local MIRROR=$1
+  local mirror=$1
   local manifest=$2
 
-  wget -O$manifest "$MIRROR"/manifest
+  wget -O$manifest "${mirror}/${BRANCH}.manifest" || wget -O$manifest "${mirror}/manifest"
 
   if test $? -ne 0; then
-    echo "Couldn't fetch manifest from $MIRROR" >&2
+    echo "Couldn't fetch manifest from $mirror" >&2
     return 1
   fi
 
