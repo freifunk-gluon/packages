@@ -1,0 +1,8 @@
+local orig =util.exec([[awk '/O/ {next} /B/ {next} {gsub("(\\))|(\\()|(\]:)|(\\[)","",$0)} $5 ~ /wlan[0-9\-]*/ {print "" $1 "," $3 ""}' /sys/kernel/debug/batman_adv/bat0/originators]])
+local originators = {}
+for _, line in ipairs(util.split(orig)) do
+	if( line ~= nil and line ~= '') then
+		table.insert(originators, util.split(line,","))
+	end
+end
+return originators
