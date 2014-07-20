@@ -1,186 +1,205 @@
-#!/bin/sh
+#!/usr/bin/lua
 
 
-BRANCH=$(uci get autoupdater.settings.branch)
+local fs = require('luci.fs')
+local nixio = require('nixio')
+local platform_info = require('platform_info')
+local uci = require('luci.model.uci').cursor()
+local util = require('luci.util')
 
-PROBABILITY=$(uci get autoupdater.${BRANCH}.probability)
+local autoupdater_util = require('autoupdater.util')
+local autoupdater_version = require('autoupdater.version')
 
-if test "a$1" != "a-f"; then
-  if test $(uci get autoupdater.settings.enabled) != 1; then
-    echo "autoupdater is disabled"
-    exit 0
-  fi
-  # get one random byte from /dev/urandom, convert it to decimal and check
-  # against update_probability*255
-  hexdump -n1 -e '/1 "%d"' /dev/urandom | awk "{exit \$1 > $PROBABILITY * 255}"
-  if test $? -ne 0; then
-    echo "No autoupdate this time. Use -f to override"
-    exit 0
-  fi
-fi
 
-BRANCH_NAME=$(uci get autoupdater.${BRANCH}.name)
-MIRRORS=$(for mirror in $(uci get autoupdater.${BRANCH}.mirror); do \
-            hexdump -n1 -e '/1 "%d '"$mirror"'\n"' /dev/urandom; \
-          done | sort -n | cut -d' ' -f2)
-PUBKEYS=$(uci get autoupdater.${BRANCH}.pubkey)
-GOOD_SIGNATURES=$(uci get autoupdater.${BRANCH}.good_signatures)
+autoupdater_util.randomseed()
 
-VERSION_FILE=/lib/gluon/release
 
-# returns 0 when $1 is a higher version number than $2
-newer_than() {
-	# negate the return value as opkg returns 1 when the proposition is true
-	! opkg compare-versions "$1" '>>' "$2"
-}
+local settings = uci:get_all('autoupdater', 'settings')
+local branch = uci:get_all('autoupdater', settings.branch)
 
-fetch_manifest() {
-  local mirror=$1
-  local manifest=$2
 
-  wget -O$manifest "${mirror}/${BRANCH}.manifest" || wget -O$manifest "${mirror}/manifest"
+local old_version = util.trim(fs.readfile(settings.version_file) or '')
 
-  if test $? -ne 0; then
-    echo "Couldn't fetch manifest from $mirror" >&2
-    return 1
-  fi
 
-  return 0
-}
+if arg[1] ~= '-f' then
+  if settings.enabled ~= '1' then
+    io.stderr:write('autoupdater is disabled.\n')
+    os.exit(0)
+  end
 
-verify_manifest() {
-  local manifest=$1
-  local manifest_upper=$2
-  local manifest_lower=$(mktemp)
-  awk "BEGIN    { sep=0 }
-     /^---\$/ { sep=1; next }
-              { if(sep==0) print > \"$manifest_upper\";
-                else       print > \"$manifest_lower\"}" \
-    $manifest
+  if math.random() >= tonumber(branch.probability) then
+    io.stderr:write('No autoupdate this time. Use -f to override.\n')
+    os.exit(0)
+  end
+end
 
-  local signatures=""
-  while read sig; do
-    echo "$sig" | grep -q "^[0-9a-f]\{128\}$"
-    if test $? -ne 0; then
-      continue
-    fi
-    signatures="$signatures -s $sig"
-  done < $manifest_lower
 
-  local pubkeys=""
-  for key in $PUBKEYS; do
-    pubkeys="$pubkeys -p $key"
-  done
+-- Verifies a file given as a list of lines with a list of signatures using ecdsaverify
+local function verify_lines(lines, sigs)
+  local command = string.format('ecdsaverify -n %i', branch.good_signatures)
 
-  rm -f $manifest_lower
+  -- Build command line from sigs and branch.pubkey
+  for _, sig in ipairs(sigs) do
+    if sig:match('^' .. string.rep('%x', 128) .. '$') then
+      command = command .. ' -s ' .. sig
+    end
+  end
 
-  ecdsaverify -n $GOOD_SIGNATURES $pubkeys $signatures $manifest_upper
+  for _, key in ipairs(branch.pubkey) do
+    if key:match('^' .. string.rep('%x', 64) .. '$') then
+      command = command .. ' -p ' .. key
+    end
+  end
 
-  if test $? -ne 0; then
-    echo "Not enough valid signatures!" >&2
-    return 1
-  fi
 
-  return 0
-}
+  -- Call ecdsautils
+  local pid, f = autoupdater_util.popen(command)
 
-analyse_manifest() {
-  local manifest_upper=$1
+  for _, line in ipairs(lines) do
+    f:write(line)
+    f:write('\n')
+  end
 
-  grep -q "^BRANCH=${BRANCH_NAME}$" $manifest_upper
+  f:close()
 
-  if test $? -ne 0; then
-    echo "Wrong branch. We are on ${BRANCH_NAME}" >&2
-    return 1
-  fi
 
-  local my_firmware
-  my_firmware=$(grep "^${my_model} " $manifest_upper)
+  local wpid, status, code = nixio.waitpid(pid)
+  return wpid and status == 'exited' and code == 0
+end
 
-  if test $? -ne 0; then
-    echo "No matching firmware found (model ${my_model})" >&2
-    return 1
-  fi
 
-  fw_version=$(echo "${my_firmware}"|cut -d' ' -f2)
-  fw_checksum=$(echo "${my_firmware}"|cut -d' ' -f3)
-  fw_file=$(echo "${my_firmware}"|cut -d' ' -f4)
+-- Downloads, parses and verifies the update manifest from a mirror
+-- Returns a table with the fields version, checksum and filename if everything is ok, nil otherwise
+local function read_manifest(mirror)
+  local sep = false
 
-  return 0
-}
+  local lines = {}
+  local sigs = {}
 
-fetch_firmware() {
-  local MIRROR=$1
-  local fw_image=$2
+  local branch_ok = false
 
-  wget -O$fw_image "${MIRROR}/${fw_file}"
+  local ret = {}
 
-  if test $? -ne 0; then
-    echo "Error downloading image from $MIRROR" >&2
-    return 1
-  fi
+  -- Read all lines from the manifest
+  -- The upper part is saves to lines, the lower part to sigs
+  for line in io.popen(string.format("wget -O- '%s/%s.manifest'", mirror, branch.name), 'r'):lines() do
+    if not sep then
+      if line == '---' then
+	sep = true
+      else
+	table.insert(lines, line)
 
-  return 0
-}
+	if line == ('BRANCH=' .. branch.name) then
+	  branch_ok = true
+	end
 
-autoupdate() {
-  local MIRROR=$1
+	local model, version, checksum, filename = line:match('^([^ ]+) ([^ ]+) ([^ ]+) ([^ ]+)$')
 
-  local manifest=$(mktemp)
-  fetch_manifest $MIRROR $manifest || { rm -f $manifest; return 1; }
+	if model == platform_info.get_image_name() then
+	  ret.version = version
+	  ret.checksum = checksum
+	  ret.filename = filename
+	end
+      end
+    else
+      table.insert(sigs, line)
+    end
+  end
 
-  local manifest_upper=$(mktemp)
-  verify_manifest $manifest $manifest_upper || { rm -f $manifest $manifest_upper; return 1; }
-  rm -f $manifest
+  -- Do some very basic checks before checking the signatures
+  -- (as the signature verification is computationally expensive)
+  if not sep then
+    io.stderr:write('There seems to have gone something wrong downloading the manifest from ' .. mirror .. '\n')
+    return nil
+  end
 
-  analyse_manifest $manifest_upper || { rm -f $manifest_upper; return 1; }
-  rm -f $manifest_upper
+  if not branch_ok then
+    io.stderr:write('Wrong branch. We are on ', branch.name, '.\n')
+    return nil
+  end
 
-  if newer_than "$fw_version" "$my_version"; then
-    echo "New version available"
+  if not ret.version then
+    io.stderr:write('No matching firmware found (model ' .. platform_info.get_image_name() .. ')\n')
+    return nil
+  end
 
-    # drop caches to make room for firmware image
-    sync
-    sysctl -w vm.drop_caches=3
+  if not verify_lines(lines, sigs) then
+    io.stderr:write('Not enough valid signatures!\n')
+    return nil
+  end
 
-    local fw_image=$(mktemp)
-    fetch_firmware $MIRROR $fw_image || { rm -f $fw_image; return 1; }
+  return ret
+end
 
-    image_sha512=$(sha512sum "$fw_image" | awk '{print $1}')
-    image_md5=$(md5sum "$fw_image" | awk '{print $1}')
-    if [ "$image_sha512" != "$fw_checksum" -a "$image_md5" != "$fw_checksum" ]; then
-      echo "Invalid image checksum" >&2
-      rm -f $fw_image
-      return 1
-    fi
-    echo "Upgrading firmware."
 
-    sysupgrade "${fw_image}"
-  else
-    echo "No new firmware available"
-  fi
+-- Downloads the firmware image from a mirror to a given output file
+local function fetch_firmware(mirror, filename, output)
+  if os.execute(string.format("wget -O '%s' '%s/%s'", output, mirror, filename)) ~= 0 then
+    io.stderr:write('Error downloading the image from ' .. mirror .. '\n')
+    return false
+  end
 
-  return 0
-}
+  return true
+end
 
-trap 'echo Signal ignored.' INT TERM PIPE
 
-my_model="$(lua -e 'print(require("platform_info").get_image_name())')"
+-- Tries to perform an update from a given mirror
+local function autoupdate(mirror)
+  local manifest = read_manifest(mirror)
+  if not manifest then
+    return false
+  end
 
-if [ ! -f "$VERSION_FILE" ]; then
-  echo "Couldn't determine firmware version!" >&2
-  exit 1
-fi
+  if not autoupdater_version.newer_than(manifest.version, old_version) then
+    io.stderr:write('No new firmware available.\n')
+    return true
+  end
 
-my_version="$(cat "$VERSION_FILE")"
+  io.stderr:write('New version available.\n')
 
-for mirror in $MIRRORS; do
+  os.execute('sync; sysctl -w vm.drop_caches=3')
+  collectgarbage()
 
-  autoupdate $mirror && exit 0
+  local image = os.tmpname()
+  if not fetch_firmware(mirror, manifest.filename, image) then
+    return false
+  end
 
-  unset fw_version
-  unset fw_checksum
-  unset fw_file
+  local checksum = util.exec(string.format("sha512sum '%s'", image)):match('^%x+')
+  if checksum ~= manifest.checksum then
+    io.stderr:write('Invalid image checksum!\n')
+    os.remove(image)
+    return false
+  end
 
-done
+  io.stderr:write('Upgrading firmware...\n')
+  local null = nixio.open('/dev/null', 'w+')
+  if null then
+    nixio.dup(null, nixio.stdin)
+    nixio.dup(null, nixio.stderr)
+    if null:fileno() > 2 then
+      null:close()
+    end
+  end
 
+  nixio.exec('/sbin/sysupgrade', image)
+
+  -- This should never be reached as nixio.exec replaces the autoupdater process unless /sbin/sysupgrade can't be executed
+  -- We output the error message through stdout as stderr isn't available anymore
+  io.write('Failed to call sysupgrade?\n')
+  os.remove(image)
+  os.exit(1)
+end
+
+
+local mirrors = branch.mirror
+
+while #mirrors > 0 do
+  local mirror = table.remove(mirrors, math.random(#mirrors))
+  if autoupdate(mirror) then
+    os.exit(0)
+  end
+end
+
+io.stderr:write('No usable mirror found.\n')
+os.exit(1)

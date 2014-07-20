@@ -1,6 +1,7 @@
 #config autoupdater settings
 #	option enabled 1
 #	option branch "stable"
+#	option version_file "/lib/firmware_version"
 
 #config branch stable
 	# The branch name given in the manifest
