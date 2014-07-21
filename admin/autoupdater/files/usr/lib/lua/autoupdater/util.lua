@@ -35,3 +35,27 @@ function randomseed()
   -- The and is necessary as Lua on OpenWrt doesn't like integers over 2^31-1
   math.randomseed(nixio.bit.band(b1*0x1000000 + b2*0x10000 + b3*0x100 + b4, 0x7fffffff))
 end
+
+
+-- Takes a date and time in RFC3339 format and returns a Unix timestamp
+function parse_date(date)
+  local year, month, day, hour, minute, second, tzs, tzh, tzm = date:match('^(%d%d%d%d)%-(%d%d)%-(%d%d) (%d%d):(%d%d):(%d%d)([%+%-])(%d%d):(%d%d)$')
+  if not year then
+    return nil
+  end
+
+  local a = math.floor((14 - month)/12)
+  local y = year - a
+  local m = month + 12*a - 3
+
+  -- Based on a well-known formula for Julian dates
+  local days = day + math.floor((153*m + 2)/5) + 365*y + math.floor(y/4) - math.floor(y/100) + math.floor(y/400) - 719469
+  local time = hour*3600 + minute*60 + second
+  local tz = tzh*3600 + tzm*60
+
+  if tzs == '-' then
+    tz = -tz
+  end
+
+  return days * 86400 + time - tz
+end
