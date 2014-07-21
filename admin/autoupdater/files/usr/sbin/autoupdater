@@ -21,7 +21,23 @@ local branch = uci:get_all('autoupdater', settings.branch)
 local old_version = util.trim(fs.readfile(settings.version_file) or '')
 
 
-local force = (arg[1] == '-f')
+-- If force is true the updater will perform an upgrade regardless of
+-- the priority and even when it is disabled in uci
+local force = false
+
+-- If oneshot is true the updater will perform an update only if the whole
+-- timespan given by the priority has passed
+local oneshot = false
+
+
+for _, a in ipairs(arg) do
+  if a == '-f' then
+    force = true
+  elseif a == '-o' then
+    oneshot = true
+  end
+end
+
 
 if settings.enabled ~= '1' and not force then
   io.stderr:write('autoupdater is disabled.\n')
@@ -158,6 +174,8 @@ local function get_probability(date, priority)
     return 0
   elseif diff >= seconds then
     return 1
+  elseif oneshot then
+    return 0
   else
     local x = diff/seconds
     -- This is the most simple polynomial with value 0 at 0, 1 at 1, and whose first derivative is 0 at both 0 and 1
