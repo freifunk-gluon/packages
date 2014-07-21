@@ -62,7 +62,18 @@
 		<%- if not self.cancel then -%><%-:Cancel-%><%-else-%><%=self.cancel%><%end-%>
 	" />
 <% end %>
-		<script type="text/javascript">cbi_d_update();</script>
+		<script type="text/javascript">
+			cbi_d_update();
+			window.onload = function() {
+				var spread_latitude = document.getElementById('cbid.wizard.1._latitude');
+				var spread_longitude = document.getElementById('cbid.wizard.1._longitude');
+				spread_latitude.addEventListener('change', function() {
+					p=spread_latitude.value.trim().split(/[ ,]+/);
+					spread_latitude.value = p[0];
+					spread_longitude.value = p[1];
+				});
+			}
+		</script>
 	</div>
 </form>
 <% end %>
