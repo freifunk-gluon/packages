@@ -1,4 +1,6 @@
 BRANCH=stable
+DATE=1970-01-01 00:00:00+00:00
+PRIORITY=7
 
 # model               ver sha512sum                                                                                                                        filename
 tp-link-tl-wdr4300-v1 0.4 c300c2b80a8863506cf3b19359873c596d87af3183c4826462dfb5aa69bec7ce65e3db23a9f6f779fd0f3cc50db5d57070c2b62942abf4fb0e08ae4cb48191a0 gluon-0.4-tp-link-tl-wdr4300-v1-sysupgrade.bin
