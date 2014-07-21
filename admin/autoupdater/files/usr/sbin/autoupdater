@@ -21,16 +21,11 @@ local branch = uci:get_all('autoupdater', settings.branch)
 local old_version = util.trim(fs.readfile(settings.version_file) or '')
 
 
-if arg[1] ~= '-f' then
-  if settings.enabled ~= '1' then
-    io.stderr:write('autoupdater is disabled.\n')
-    os.exit(0)
-  end
+local force = (arg[1] == '-f')
 
-  if math.random() >= tonumber(branch.probability) then
-    io.stderr:write('No autoupdate this time. Use -f to override.\n')
-    os.exit(0)
-  end
+if settings.enabled ~= '1' and not force then
+  io.stderr:write('autoupdater is disabled.\n')
+  os.exit(0)
 end
 
 
@@ -93,9 +88,15 @@ local function read_manifest(mirror)
 	  branch_ok = true
 	end
 
+	local date = line:match('^DATE=(.+)$')
+	local priority = line:match('^PRIORITY=([%d%.]+)$')
 	local model, version, checksum, filename = line:match('^([^ ]+) ([^ ]+) ([^ ]+) ([^ ]+)$')
 
-	if model == platform_info.get_image_name() then
+	if date then
+	  ret.date = autoupdater_util.parse_date(date)
+	elseif priority then
+	  ret.priority = tonumber(priority)
+	elseif model == platform_info.get_image_name() then
 	  ret.version = version
 	  ret.checksum = checksum
 	  ret.filename = filename
@@ -110,6 +111,11 @@ local function read_manifest(mirror)
   -- (as the signature verification is computationally expensive)
   if not sep then
     io.stderr:write('There seems to have gone something wrong downloading the manifest from ' .. mirror .. '\n')
+    return nil
+  end
+
+  if not ret.date or not ret.priority then
+    io.stderr:write('The manifest downloaded from ' .. mirror .. ' is invalid (DATE or PRIORITY missing)\n')
     return nil
   end
 
@@ -143,6 +149,24 @@ local function fetch_firmware(mirror, filename, output)
 end
 
 
+-- Returns the computed update probability
+local function get_probability(date, priority)
+  local seconds = priority * 86400
+  local diff = os.difftime(os.time(), date)
+
+  if diff < 0 then
+    return 0
+  elseif diff >= seconds then
+    return 1
+  else
+    local x = diff/seconds
+    -- This is the most simple polynomial with value 0 at 0, 1 at 1, and whose first derivative is 0 at both 0 and 1
+    -- (we all love continuously differentiable functions, right?)
+    return (-2)*x^3 + 3*x^2
+  end
+end
+
+
 -- Tries to perform an update from a given mirror
 local function autoupdate(mirror)
   local manifest = read_manifest(mirror)
@@ -156,6 +180,13 @@ local function autoupdate(mirror)
   end
 
   io.stderr:write('New version available.\n')
+
+
+  if not force and math.random() >= get_probability(manifest.date, manifest.priority) then
+    io.stderr:write('No autoupdate this time. Use -f to override.\n')
+    return true
+  end
+
 
   os.execute('sync; sysctl -w vm.drop_caches=3')
   collectgarbage()
