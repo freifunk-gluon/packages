@@ -8,7 +8,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ecdsautils
-PKG_VERSION:=0.2
+PKG_VERSION:=0.3.2
 PKG_RELEASE:=1
 PKG_REV:=v$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
