@@ -25,16 +25,16 @@ local old_version = util.trim(fs.readfile(settings.version_file) or '')
 -- the priority and even when it is disabled in uci
 local force = false
 
--- If oneshot is true the updater will perform an update only if the whole
--- timespan given by the priority has passed
-local oneshot = false
+-- If fallback is true the updater will perform an update only if the
+-- timespan given by the priority and another 24h have passed
+local fallback = false
 
 
 for _, a in ipairs(arg) do
   if a == '-f' then
     force = true
-  elseif a == '-o' then
-    oneshot = true
+  elseif a == '--fallback' then
+    fallback = true
   end
 end
 
@@ -182,12 +182,19 @@ local function get_probability(date, priority)
     else
       -- Will give 1 when priority == 0, and lower probabilities the higher the priority value is
       -- (similar to the old static probability system)
-      return 0.9^priority
+      return 0.75^priority
     end
+
+  elseif fallback then
+    if diff >= seconds + 86400 then
+      return 1
+    else
+      return 0
+    end
+
   elseif diff >= seconds then
     return 1
-  elseif oneshot then
-    return 0
+
   else
     local x = diff/seconds
     -- This is the most simple polynomial with value 0 at 0, 1 at 1, and whose first derivative is 0 at both 0 and 1
