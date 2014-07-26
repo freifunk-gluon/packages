@@ -8,6 +8,9 @@
 <p>
 	<%= template.render_string(site.config_mode.msg_welcome, {hostname=hostname, sysconfig=sysconfig}) %>
 </p>
+<p>
+	<%=self.data["autoupdater_msg"]%>
+</p>
 
 <% if not self.embedded then %>
 <form method="post" enctype="multipart/form-data" action="<%=REQUEST_URI%>">
