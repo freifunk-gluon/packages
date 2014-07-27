@@ -9,8 +9,8 @@ PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
 include $(INCLUDE_DIR)/package.mk
 
 define Package/lua-platform-info
-  SECTION:=luci
-  CATEGORY:=LuCi
+  SECTION:=libs
+  CATEGORY:=Libraries
   TITLE:=Lua hardware platform information library
   DEPENDS:=+lua @TARGET_ar71xx_generic
 endef
