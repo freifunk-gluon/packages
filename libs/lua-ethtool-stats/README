@@ -1,0 +1,7 @@
+This package provides a Lua module with the name 'ethtool_stats'. The module has
+a single function, interface_stats().
+
+interface_stats() expects one parameter, the name of the interface to get the
+stats from. It returns a table with string keys and numeric values which
+contains the stats returned by ethtool (the same `ethtool -S interface` would
+yield).
