@@ -1,7 +1,12 @@
-local f = io.popen('. /lib/functions.sh; . /lib/ar71xx.sh; ar71xx_board_detect; echo "$AR71XX_BOARD_NAME"; echo "$AR71XX_MODEL"')
-local board_name, model = f:read("*a"):match('([^\n]+)\n([^\n]+)')
-f:close()
+local function read_line(file)
+  local f = io.open(file)
+  local ret = f:read('*line')
+  f:close()
+  return ret
+end
 
+local board_name = read_line('/tmp/sysinfo/board_name')
+local model = read_line('/tmp/sysinfo/model')
 
 module 'platform_info'
 
