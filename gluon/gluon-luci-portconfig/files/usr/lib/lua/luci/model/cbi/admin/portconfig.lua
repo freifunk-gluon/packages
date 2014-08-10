@@ -13,12 +13,13 @@ $Id$
 ]]--
 
 local uci = luci.model.uci.cursor()
+local sysconfig = require 'gluon.sysconfig'
 
 local wan = uci:get_all("network", "wan")
 local wan6 = uci:get_all("network", "wan6")
 local dns = uci:get_first("gluon-wan-dnsmasq", "static")
 
-local f = SimpleForm("portconfig", "WAN-Verbindung")
+local f = SimpleForm("portconfig")
 f.template = "admin/expertmode"
 f.submit = "Speichern"
 f.reset = "Zurücksetzen"
@@ -26,7 +27,7 @@ f.reset = "Zurücksetzen"
 local s
 local o
 
-s = f:section(SimpleSection, nil, nil)
+s = f:section(SimpleSection, "WAN-Verbindung", nil)
 
 o = s:option(ListValue, "ipv4", "IPv4")
 o:value("dhcp", "Automatisch (DHCP)")
@@ -52,9 +53,6 @@ o.value = wan.gateway
 o.datatype = "ip4addr"
 o.rmempty = false
 
-
-s = f:section(SimpleSection, nil, nil)
-
 o = s:option(ListValue, "ipv6", "IPv6")
 o:value("dhcpv6", "Automatisch (RA/DHCPv6)")
 o:value("static", "Statisch")
@@ -73,20 +71,24 @@ o.value = wan6.ip6gw
 o.datatype = "ip6addr"
 o.rmempty = false
 
-
 if dns then
-  s = f:section(SimpleSection, nil, nil)
-
   o = s:option(DynamicList, "dns", "Statische DNS-Server")
   o:write(nil, uci:get("gluon-wan-dnsmasq", dns, "server"))
   o.datatype = "ipaddr"
 end
 
-s = f:section(SimpleSection, nil, nil)
+s = f:section(SimpleSection, "Meshing", nil)
 
 o = s:option(Flag, "mesh_wan", "Mesh auf dem WAN-Port aktivieren")
 o.default = uci:get_bool("network", "mesh_wan", "auto") and o.enabled or o.disabled
 o.rmempty = false
+
+if sysconfig.lan_ifname then
+  o = s:option(Flag, "mesh_lan", "Mesh auf den LAN-Ports aktivieren")
+  o.default = uci:get_bool("network", "mesh_lan", "auto") and o.enabled or o.disabled
+  o.rmempty = false
+end
+
 
 function f.handle(self, state, data)
   if state == FORM_VALID then
@@ -111,6 +113,16 @@ function f.handle(self, state, data)
     end
 
     uci:set("network", "mesh_wan", "auto", data.mesh_wan)
+
+    if sysconfig.lan_ifname then
+      uci:set("network", "mesh_lan", "auto", data.mesh_lan)
+
+      if data.mesh_lan == '1' then
+        uci:set("network", "client", "ifname", "bat0")
+      else
+        uci:set("network", "client", "ifname", sysconfig.lan_ifname .. " bat0")
+      end
+    end
 
     uci:save("network")
     uci:commit("network")
