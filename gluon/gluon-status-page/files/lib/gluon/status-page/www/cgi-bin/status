@@ -7,7 +7,7 @@ escape_html() {
 }
 
 linknodes() {
-  PREFIX=$(uci get network.local_node_route6.target | cut -d: -f 1-4)
+  PREFIX=$(ip addr show br-client scope global | grep inet6 | cut -d ' ' -f 6 | head -n1 | cut -d: -f 1-4)
   sed 's#\([0-9a-f]\{2\}\):\([0-9a-f]\{2\}\):\([0-9a-f]\{2\}\):\([0-9a-f]\{2\}\):\([0-9a-f]\{2\}\):\([0-9a-f]\{2\}\)#<a href="http://['$PREFIX':\1\2:\3ff:fe\4:\5\6]/">&</a>#g'
 }
 
