@@ -19,6 +19,7 @@ cat <<EOF
 <html>
   <head>
     <title>$(cat /proc/sys/kernel/hostname)</title>
+    <meta name="viewport" content="width=device-width">
   </head>
   <body>
 EOF
