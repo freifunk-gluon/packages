@@ -17,12 +17,19 @@ uci:commit('batman-adv')
 
 
 if not uci:get('network', 'client') then
-  local ifname
+  local ifname = 'bat0'
 
   if sysconfig.lan_ifname then
-    ifname = sysconfig.lan_ifname .. ' bat0'
-  else
-    ifname = 'bat0'
+    -- if the LAN interface already is in another interface, don't add it to client
+    local add_lan = true
+    uci:foreach('network', 'interface', function(section)
+      if section.ifname and section.ifname:match(sysconfig.lan_ifname) then
+        add_lan = false
+      end
+    end)
+    if add_lan then
+      ifname = ifname .. ' ' .. sysconfig.lan_ifname
+    end
   end
 
   uci:section('network', 'interface', 'client',
