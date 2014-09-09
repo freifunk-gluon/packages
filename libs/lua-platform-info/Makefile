@@ -12,7 +12,7 @@ define Package/lua-platform-info
   SECTION:=libs
   CATEGORY:=Libraries
   TITLE:=Lua hardware platform information library
-  DEPENDS:=+lua @(TARGET_ar71xx_generic||TARGET_mpc85xx_generic)
+  DEPENDS:=+lua @(TARGET_ar71xx_generic||TARGET_mpc85xx_generic||TARGET_x86_generic)
 endef
 
 define Package/lua-platform-info/description
