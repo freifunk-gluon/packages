@@ -11,6 +11,12 @@ local autoupdater_util = require('autoupdater.util')
 local autoupdater_version = require('autoupdater.version')
 
 
+if not platform_info.get_image_name() then
+  io.stderr:write("The autoupdater doesn't support this hardware model.\n")
+  os.exit(1)
+end
+
+
 autoupdater_util.randomseed()
 
 
