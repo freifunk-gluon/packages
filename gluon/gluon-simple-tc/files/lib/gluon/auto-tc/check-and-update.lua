@@ -72,7 +72,6 @@ for round=1,9 do
 		end
 	end
 
-	io.write("\ngluon-simple-tc "..interface.." "..math.floor(maxdown*limit_in/100).." "..math.floor(maxup*limit_up/100).."\n")
 	os.execute("gluon-simple-tc "..interface.." "..math.floor(maxdown*limit_in/100).." "..math.floor(maxup*limit_up/100))
 
 	-- if we have had some successfull tries, but the router rebooted too fast
