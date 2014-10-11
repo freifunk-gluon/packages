@@ -16,6 +16,19 @@ tc_interface() {
 
 	config_get limit_ingress "$iface" limit_ingress
 	config_get limit_egress "$iface" limit_egress
+	config_get autotest "$iface" autotest
+
+	# Limits per % -> Langzeitmessung im Hintergrund
+	if [ 0$autotest -eq 1 ] ; then
+		echo "$0 autotest allowed in uci / site.conf " >>/tmp/auto-tc-output
+		if [ "0$limit_ingress" -lt 100 ] || [ "0$limit_egress" -lt 100 ] ; then
+			echo "autotest needed (wert <100) " >>/tmp/auto-tc-output
+			/lib/gluon/auto-tc/check-and-update.lua >>/tmp/auto-tc-output &
+			# Minimalfallback für den Fall, das die Messungen schief gehen
+			[ "$limit_ingress" ] && [ "0$limit_ingress" -lt 100 ] && limit_ingress=400
+			[ "$limit_egress" ]  && [ "0$limit_egress" -lt 100 ]  && limit_egress=100
+		fi
+	fi
 
 	[ "$limit_ingress" ] || limit_ingress=-
 	[ "$limit_egress" ] || limit_egress=-
