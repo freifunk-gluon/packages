@@ -27,7 +27,6 @@ local os = os
 local string = string
 local tonumber = tonumber
 
-local nixio = require 'nixio'
 local sysconfig = require 'gluon.sysconfig'
 
 
@@ -71,7 +70,8 @@ end
 -- (4, 0): mesh VPN
 function generate_mac(f, i)
   local m1, m2, m3, m4, m5, m6 = string.match(sysconfig.primary_mac, '(%x%x):(%x%x):(%x%x):(%x%x):(%x%x):(%x%x)')
-  m1 = nixio.bit.bor(tonumber(m1, 16), 0x02)
+  m1 = tonumber(m1, 16)
+  m1 = math.floor(m1/4) * 4 + 2 + m1 % 2
   m2 = (tonumber(m2, 16)+f) % 0x100
   m3 = (tonumber(m3, 16)+i) % 0x100
 
