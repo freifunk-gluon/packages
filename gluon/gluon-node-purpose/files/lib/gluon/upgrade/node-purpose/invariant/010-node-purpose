@@ -1,0 +1,23 @@
+#!/usr/bin/lua
+
+local site = require 'gluon.site_config'
+local uci = require('luci.model.uci').cursor()
+
+local config = 'gluon-node-info'
+
+if not site.default_role then
+  role = ''
+else
+  role = site.default_role
+end
+
+if not uci:get_first(config, 'purpose') then
+  uci:section(config, 'purpose')
+end
+
+if role ~= '' then
+  uci:set(config, uci:get_first(config, 'purpose'), 'role', role)
+end
+
+uci:save(config)
+uci:commit(config)
