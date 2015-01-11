@@ -95,7 +95,7 @@ endef
 $(eval $(call Download,batctl-legacy))
 
 BATCTL_EXTRACT = tar xzf "$(DL_DIR)/batctl-$(BATCTL_VERSION).tar.gz" -C "$(BUILD_DIR)/$(PKG_NAME)"
-BATCTL_PATCH = $(call Build/DoPatch,"$(PKG_BATCTL_BUILD_DIR)","$(PATCH_DIR)","*batctl*")
+BATCTL_PATCH = $(call Build/DoPatch,"$(PKG_BATCTL_BUILD_DIR)","$(PATCH_DIR)",".*batctl.*")
 BATCTL_BUILD = $(MAKE_BATCTL_ENV) $(MAKE) -C $(PKG_BATCTL_BUILD_DIR) $(MAKE_BATCTL_ARGS)
 BATCTL_INSTALL = $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/local/sbin/batctl $(1)/usr/sbin/
 endif
@@ -110,7 +110,7 @@ define Build/DoPatch
 endef
 
 define Build/Patch
-	$(call Build/DoPatch,"$(PKG_BUILD_DIR)","$(PATCH_DIR)","*batman*")
+	$(call Build/DoPatch,"$(PKG_BUILD_DIR)","$(PATCH_DIR)",".*batman.*")
 	$(BATCTL_EXTRACT)
 	$(BATCTL_PATCH)
 endef
