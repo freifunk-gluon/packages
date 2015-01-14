@@ -1,6 +1,6 @@
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=gluon-announce
+PKG_NAME:=gluon-collect-data
 PKG_VERSION:=1
 PKG_RELEASE:=1
 
@@ -8,11 +8,11 @@ PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/gluon-announce
+define Package/gluon-collect-data
   SECTION:=gluon
   CATEGORY:=Gluon
   DEPENDS:=+gluon-core +luci-lib-json +lua-ethtool-stats
-  TITLE:=Lua scripts announcing various information
+  TITLE:=Lua scripts collecting various information
 endef
 
 define Build/Prepare
@@ -25,8 +25,8 @@ endef
 define Build/Compile
 endef
 
-define Package/gluon-announce/install
+define Package/gluon-collect-data/install
 	$(CP) ./files/* $(1)/
 endef
 
-$(eval $(call BuildPackage,gluon-announce))
+$(eval $(call BuildPackage,gluon-collect-data))
