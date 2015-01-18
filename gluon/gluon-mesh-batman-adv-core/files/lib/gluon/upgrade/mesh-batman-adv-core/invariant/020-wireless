@@ -26,14 +26,38 @@ local function configure_radio(radio, index, config)
   )
 
   local mesh = 'mesh_' .. radio
+  local mtu = 1528
+  if config.mesh_mtu then
+	mtu = config.mesh_mtu
+  end
+
   uci:delete('network', mesh)
-  uci:section('network', 'interface', mesh,
+  uci:delete('network', mesh .. '_vbatadv')
+
+  if config.vlan_batadv then
+	uci:section('network', 'interface', mesh,
 	      {
+		proto = 'none',
+		mtu = mtu + 4,
+	      }
+	)
+	uci:section('network', 'interface', mesh .. '_vbatadv',
+	      {
+		ifname = '@' .. mesh .. '.' .. config.vlan_batadv,
 		proto = 'batadv',
-		mtu = '1528',
+		mtu = mtu,
 		mesh = 'bat0',
 	      }
-  )
+	)
+  else
+	uci:section('network', 'interface', mesh,
+	      {
+		proto = 'batadv',
+		mtu = mtu,
+		mesh = 'bat0',
+	      }
+	)
+  end
 
   uci:delete('wireless', mesh)
   uci:section('wireless', 'wifi-iface', mesh,
