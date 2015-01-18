@@ -31,13 +31,14 @@ local function configure_radio(radio, index, config)
   if config.vlan_batadv then
 	local meshif = mesh .. '_' .. config.vlan_batadv
 	local meshifn = '@' .. mesh .. '.' .. config.vlan_batadv
-	uci:section('network', 'interface', mesh, { proto = 'none', })
+	uci:section('network', 'interface', mesh,
+		{ proto = 'none', mtu = '1536',})
 	uci:delete('network', meshif)
 	uci:section('network', 'interface', meshif,
 	      {
 		ifname = meshifn,
 		proto = 'batadv',
-		mtu = '1528',
+		mtu = '1532',
 		mesh = 'bat0',
 	      }
 	)
