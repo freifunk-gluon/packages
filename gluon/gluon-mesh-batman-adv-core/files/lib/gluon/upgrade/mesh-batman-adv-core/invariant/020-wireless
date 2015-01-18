@@ -26,6 +26,11 @@ local function configure_radio(radio, index, config)
   )
 
   local mesh = 'mesh_' .. radio
+  local mtu = 1528
+  if config.mesh_mtu then
+	mtu = config.mesh_mtu
+  end
+
   uci:delete('network', mesh)
   uci:delete('network', mesh .. '_vbatadv')
 
@@ -33,14 +38,14 @@ local function configure_radio(radio, index, config)
 	uci:section('network', 'interface', mesh,
 	      {
 		proto = 'none',
-		mtu = '1532',
+		mtu = mtu + 4,
 	      }
 	)
 	uci:section('network', 'interface', mesh .. '_vbatadv',
 	      {
 		ifname = '@' .. mesh .. '.' .. config.vlan_batadv,
 		proto = 'batadv',
-		mtu = '1528',
+		mtu = mtu,
 		mesh = 'bat0',
 	      }
 	)
@@ -48,7 +53,7 @@ local function configure_radio(radio, index, config)
 	uci:section('network', 'interface', mesh,
 	      {
 		proto = 'batadv',
-		mtu = '1528',
+		mtu = mtu,
 		mesh = 'bat0',
 	      }
 	)
