@@ -2,13 +2,13 @@ local f, s, o
 local uci = luci.model.uci.cursor()
 local config = 'wireless'
  
--- where to read the configuration from
- 
+--set the heading, button and stuff 
 f = SimpleForm("wifi", "WLAN-Config")
 f.reset = false
 f.template = "admin/expertmode"
 f.submit = "Speichern"
- 
+
+-- text, which describes what the package does to the user
 s = f:section(SimpleSection, nil, [[
 Viele Freifunk-Communitys betreiben ein sogenanntes Dachnetz. Das bedeutet, dass
 manche Router sich über große Strecken miteinander verbinden, um viele kleine
@@ -19,54 +19,59 @@ zu deaktivieren.
  
  
 local radios = {}
- 
+
+-- look for wifi interfaces and add them to the array
 uci:foreach('wireless', 'wifi-device',
 function(s)
-table.insert(radios, s['.name'])
+	table.insert(radios, s['.name'])
 end
 )
- 
+
+--add a client and mesh checkbox  for each interface
 for index, radio in ipairs(radios) do
- 
-local hwmode = uci:get('wireless', radio, 'hwmode')
-if hwmode == '11g' or hwmode == '11ng' then
- 
-o = s:option(Flag, 'clientbox' .. index, "2,4GHz Client Netz aktivieren")
-o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
-o.rmempty = false
- 
-o = s:option(Flag, 'meshbox' .. index, "2,4GHz Mesh Netz aktivieren")
-o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
-o.rmempty = false
- 
-elseif hwmode == '11a' or hwmode == '11na' then
- 
-o = s:option(Flag, 'clientbox' .. index, "5GHz Client Netz aktivieren")
-o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
-o.rmempty = false
- 
-o = s:option(Flag, 'meshbox' .. index, "5GHz Mesh Netz aktivieren")
-o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
-o.rmempty = false
- 
+ 	--get the hwmode to seperate 2.4GHz and 5Ghz radios
+	local hwmode = uci:get('wireless', radio, 'hwmode')
+	
+	if hwmode == '11g' or hwmode == '11ng' then --if 2.4GHz
+	 	--box for the clientnet
+		o = s:option(Flag, 'clientbox' .. index, "2,4GHz Client Netz aktivieren")
+		o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
+		o.rmempty = false
+		--box for the meshnet 
+		o = s:option(Flag, 'meshbox' .. index, "2,4GHz Mesh Netz aktivieren")
+		o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
+		o.rmempty = false
+	 
+	elseif hwmode == '11a' or hwmode == '11na' then --if 5GHz
+		--box for the clientnet
+		o = s:option(Flag, 'clientbox' .. index, "5GHz Client Netz aktivieren")
+		o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
+		o.rmempty = false
+		--box for the meshnet
+		o = s:option(Flag, 'meshbox' .. index, "5GHz Mesh Netz aktivieren")
+		o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
+		o.rmempty = false
+	 
+	end
 end
-end
  
- 
+--if the save-button is pushed
 function f.handle(self, state, data)
-if state == FORM_VALID then
- 
-for index, radio in ipairs(radios) do
- 
-local currentclient = 'client_' .. radio
-local currentmesh = 'mesh_' .. radio
-uci:set(config, currentclient, "disabled", not data["clientbox"..index])
-uci:set(config, currentmesh, "disabled", not data["meshbox"..index])
- 
-end
-uci:save(config)
-uci:commit(config)
-end
+	if state == FORM_VALID then
+	 
+		for index, radio in ipairs(radios) do
+
+			local currentclient = 'client_' .. radio
+			local currentmesh = 'mesh_' .. radio
+			-- (de)activate the radios correstponding the the opposit value of the checkbox
+			uci:set(config, currentclient, "disabled", not data["clientbox"..index])
+			uci:set(config, currentmesh, "disabled", not data["meshbox"..index])
+
+		end
+
+	uci:save(config)
+	uci:commit(config)
+	end
 end
  
 return f
