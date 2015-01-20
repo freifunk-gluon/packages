@@ -22,6 +22,7 @@ local function configure_radio(radio, index, config)
 		mode = 'ap',
 		ssid = config.ssid,
 		macaddr = util.generate_mac(2, index),
+		disabled = config.ssid_disabled,
 	      }
   )
 
@@ -45,6 +46,7 @@ local function configure_radio(radio, index, config)
 		bssid = config.mesh_bssid,
 		macaddr = util.generate_mac(3, index),
 		mcast_rate = config.mesh_mcast_rate,
+		disabled = config.mesh_disabled,
 	      }
   )
 end
