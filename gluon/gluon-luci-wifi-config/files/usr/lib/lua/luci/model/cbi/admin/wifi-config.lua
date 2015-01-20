@@ -61,11 +61,24 @@ function f.handle(self, state, data)
 	 
 		for index, radio in ipairs(radios) do
 
-			local currentclient = 'client_' .. radio
-			local currentmesh = 'mesh_' .. radio
-			-- (de)activate the radios correstponding the the opposit value of the checkbox
-			uci:set(config, currentclient, "disabled", not data["clientbox"..index])
-			uci:set(config, currentmesh, "disabled", not data["meshbox"..index])
+			local clientstate, meshstate
+			-- get the data from the boxes and invert it
+			if data["clientbox"..index] == '0' then
+				clientenabled = 'true'
+			else
+				clientenabled = 'false'
+			end
+			-- write the data to the config file
+			uci:set(config, 'client_' .. radio, "disabled", clientenabled)
+
+			
+			if data["meshbox"..index] == '0' then                                                                      
+			    meshenabled = 'true'                                                                    
+			else                                                                                          
+			    meshenabled = 'false'                                                                   
+			end 
+						
+			uci:set(config, 'mesh_' .. radio, "disabled", meshenabled)
 
 		end
 
