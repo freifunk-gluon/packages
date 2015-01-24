@@ -11,7 +11,7 @@ define Package/gluon-simple-tc
   SECTION:=gluon
   CATEGORY:=Gluon
   TITLE:=Bandwidth limit support
-  DEPENDS:=+gluon-core +kmod-sched +libnl-tiny
+  DEPENDS:=+gluon-core +kmod-sched +libnl-tiny +iperf
 endef
 
 define Package/gluon-simple-tc/description
