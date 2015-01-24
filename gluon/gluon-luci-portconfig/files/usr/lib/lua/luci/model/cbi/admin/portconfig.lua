@@ -12,6 +12,7 @@ You may obtain a copy of the License at
 $Id$
 ]]--
 
+local sysconfig = require 'gluon.sysconfig'
 local uci = luci.model.uci.cursor()
 
 local wan = uci:get_all("network", "wan")
@@ -88,6 +89,13 @@ o = s:option(Flag, "mesh_wan", "Mesh auf dem WAN-Port aktivieren")
 o.default = uci:get_bool("network", "mesh_wan", "auto") and o.enabled or o.disabled
 o.rmempty = false
 
+if sysconfig.lan_ifname then
+  o = s:option(ListValue, "lan_mode", "LAN-Ports")
+  o:value("client", "Freifunk-Netzwerk")
+  o:value("wan", "Heim-Netzwerk vom WAN-Port")
+  o.default = uci:get("gluon-luci-portconfig", "portconfig", "lan_mode")
+end
+
 function f.handle(self, state, data)
   if state == FORM_VALID then
     uci:set("network", "wan", "proto", data.ipv4)
@@ -111,6 +119,21 @@ function f.handle(self, state, data)
     end
 
     uci:set("network", "mesh_wan", "auto", data.mesh_wan)
+
+    if sysconfig.lan_ifname then
+      uci:set("gluon-luci-portconfig", "portconfig", "lan_mode", data.lan_mode)
+      uci:save("gluon-luci-portconfig")
+      uci:commit("gluon-luci-portconfig")
+
+      -- add to WAN interface
+      local wan_ifname = uci:get('network', 'wan', 'ifname')
+      if not wan_ifname:match(sysconfig.lan_ifname) then
+        uci:set('network', 'wan', 'ifname', wan_ifname .. ' ' .. sysconfig.lan_ifname)
+      end
+      -- remove from client interface (if existent)
+      local new_lan_ifname = uci:get('network', 'client', 'ifname'):gsub(' ?' .. sysconfig.lan_ifname .. ' ?', ' ')
+      uci:set('network', 'client', 'ifname', new_lan_ifname)
+    end
 
     uci:save("network")
     uci:commit("network")
