@@ -10,11 +10,12 @@ f.submit = "Speichern"
 
 -- text, which describes what the package does to the user
 s = f:section(SimpleSection, nil, [[
-Viele Freifunk-Communitys betreiben ein sogenanntes Dachnetz. Das bedeutet, dass
-manche Router sich über große Strecken miteinander verbinden, um viele kleine
-Mesh-Netze miteinander zu verbinden. Um diese weiten Verbindungen effektiver zu
-gestalten hast du hier die Möglichkeit die SSID, mit der sich die Clients verbinden,
-zu deaktivieren.
+In diesem Abschnitt hast du die Möglichkeit die SSIDs des Client- und des
+Mesh-Netzes zu deaktivieren. Dies kann zum Beispiel erforderlich sein,
+wenn dein Router an einem hohen Punkt hängt und primär dafür gedacht ist
+andere Router mit dem Freifunk-Netz zu verbinden. Bitte lass die SSID des
+Mesh-Netzes aktiviert, damit sich auch andere Router über dich mit dem
+Freifunk verbinden können.
 ]])
  
  
@@ -34,21 +35,21 @@ for index, radio in ipairs(radios) do
 	
 	if hwmode == '11g' or hwmode == '11ng' then --if 2.4GHz
 	 	--box for the clientnet
-		o = s:option(Flag, 'clientbox' .. index, "2,4GHz Client Netz aktivieren")
+		o = s:option(Flag, 'clientbox' .. index, "2,4GHz Client-Netz aktivieren")
 		o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
 		o.rmempty = false
 		--box for the meshnet 
-		o = s:option(Flag, 'meshbox' .. index, "2,4GHz Mesh Netz aktivieren")
+		o = s:option(Flag, 'meshbox' .. index, "2,4GHz Mesh-Netz aktivieren")
 		o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
 		o.rmempty = false
 	 
 	elseif hwmode == '11a' or hwmode == '11na' then --if 5GHz
 		--box for the clientnet
-		o = s:option(Flag, 'clientbox' .. index, "5GHz Client Netz aktivieren")
+		o = s:option(Flag, 'clientbox' .. index, "5GHz Client-Netz aktivieren")
 		o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
 		o.rmempty = false
 		--box for the meshnet
-		o = s:option(Flag, 'meshbox' .. index, "5GHz Mesh Netz aktivieren")
+		o = s:option(Flag, 'meshbox' .. index, "5GHz Mesh-Netz aktivieren")
 		o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
 		o.rmempty = false
 	 

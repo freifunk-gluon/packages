@@ -7,8 +7,6 @@ for _, config in ipairs({'wifi24', 'wifi5'}) do
    need_string(config .. '.mesh_ssid')
    need_string_match(config .. '.mesh_bssid', '^%x[02468aAcCeE]:%x%x:%x%x:%x%x:%x%x:%x%x$')
    need_number(config .. '.mesh_mcast_rate')
-   need_boolean(config .. '.ssid_disabled')
-   need_boolean(config .. '.mesh_disabled')
 end
 
 need_boolean('mesh_on_wan', false)

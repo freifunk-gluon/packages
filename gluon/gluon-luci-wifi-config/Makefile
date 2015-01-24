@@ -12,7 +12,7 @@ define Package/gluon-luci-wifi-config
   SECTION:=gluon
   CATEGORY:=Gluon
   DEPENDS:=+gluon-luci-admin
-  TITLE:=UI for switching wifi on/off
+  TITLE:=UI for switching single SSIDs on/off
 endef
 
 define Build/Prepare
