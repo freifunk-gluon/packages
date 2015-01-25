@@ -1,3 +1,13 @@
+local model
+
+for line in io.lines('/proc/cpuinfo') do
+  model = line:match('^model name%s*:%s*(.+)$')
+  if model then
+    break
+  end
+end
+
+
 module 'platform_info'
 
 
@@ -18,7 +28,7 @@ end
 
 -- The model name
 function get_model()
-   return nil
+   return model
 end
 
 -- The image name for sysupgrades
