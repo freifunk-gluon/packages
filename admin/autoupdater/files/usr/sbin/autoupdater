@@ -21,8 +21,7 @@ autoupdater_util.randomseed()
 
 
 local settings = uci:get_all('autoupdater', 'settings')
-local branch = uci:get_all('autoupdater', settings.branch)
-
+local branch_name = settings.branch
 
 local old_version = util.trim(fs.readfile(settings.version_file) or '')
 
@@ -36,12 +35,39 @@ local force = false
 local fallback = false
 
 
-for _, a in ipairs(arg) do
-  if a == '-f' then
-    force = true
-  elseif a == '--fallback' then
-    fallback = true
+local function parse_args()
+  local i = 1
+  while arg[i] do
+    if arg[i] == '-f' then
+      force = true
+    elseif arg[i] == '--fallback' then
+      fallback = true
+    elseif arg[i] == '-b' then
+      i = i+1
+
+      if not arg[i] then
+	io.stderr:write("Error parsing command line: expected branch name\n")
+	os.exit(1)
+      end
+
+      branch_name = arg[i]
+    else
+      io.stderr:write("Error parsing command line: unexpected argument '" .. arg[i] .. "'\n")
+      os.exit(1)
+    end
+
+    i = i+1
   end
+end
+
+
+parse_args()
+
+
+local branch = uci:get_all('autoupdater', branch_name)
+if not branch then
+  io.stderr:write("Can't find configuration for branch '" .. branch_name .. "'\n")
+  os.exit(1)
 end
 
 
