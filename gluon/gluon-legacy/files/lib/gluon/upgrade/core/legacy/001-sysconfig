@@ -3,6 +3,7 @@
 local sysconfig = require 'gluon.sysconfig'
 local gluon_util = require 'gluon.util'
 local platform = require 'gluon.platform'
+local site = require 'gluon.site_config'
 
 local fs = require 'luci.fs'
 local uci = require('luci.model.uci').cursor()
