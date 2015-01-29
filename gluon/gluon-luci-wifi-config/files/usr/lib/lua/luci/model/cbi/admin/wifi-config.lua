@@ -11,11 +11,8 @@ f.submit = "Speichern"
 -- text, which describes what the package does to the user
 s = f:section(SimpleSection, nil, [[
 In diesem Abschnitt hast du die Möglichkeit die SSIDs des Client- und des
-Mesh-Netzes zu deaktivieren. Dies kann zum Beispiel erforderlich sein,
-wenn dein Router an einem hohen Punkt hängt und primär dafür gedacht ist
-andere Router mit dem Freifunk-Netz zu verbinden. Bitte lass die SSID des
-Mesh-Netzes aktiviert, damit sich auch andere Router über dich mit dem
-Freifunk verbinden können.
+Mesh-Netzes zu deaktivieren. Bitte lass die SSID des Mesh-Netzes aktiviert, 
+damit sich auch andere Router über dich mit dem Freifunk verbinden können.
 ]])
  
  
