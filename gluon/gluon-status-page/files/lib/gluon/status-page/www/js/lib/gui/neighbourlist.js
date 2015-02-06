@@ -25,6 +25,9 @@ define([ "lib/helper"
     var hostname = document.createElement("h3");
     info.appendChild(hostname);
 
+    var batadv = document.createElement("p");
+    info.appendChild(batadv);
+
     wrapper.appendChild(info);
 
     var infoSet = false;
@@ -45,6 +48,12 @@ define([ "lib/helper"
           signal = null;
 
         chart(signal);
+      }
+
+      if ("batadv" in d) {
+        batadv.textContent = "TQ: " + d.batadv.tq + " (" + d.batadv.lastseen + "s)";
+      } else {
+        batadv.textContent = "";
       }
 
       if (!infoSet) {
