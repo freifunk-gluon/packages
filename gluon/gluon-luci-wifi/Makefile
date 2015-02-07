@@ -1,6 +1,6 @@
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=gluon-luci-private-wifi
+PKG_NAME:=gluon-luci-wifi
 PKG_VERSION:=0.1
 PKG_RELEASE:=1
 
@@ -8,11 +8,11 @@ PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/gluon-luci-private-wifi
+define Package/gluon-luci-wifi
   SECTION:=gluon
   CATEGORY:=Gluon
   DEPENDS:=+gluon-luci-admin
-  TITLE:=UI for activating a private WLAN
+  TITLE:=UI for WLAN configuration
 endef
 
 define Build/Prepare
@@ -25,8 +25,8 @@ endef
 define Build/Compile
 endef
 
-define Package/gluon-luci-private-wifi/install
+define Package/gluon-luci-wifi/install
 	$(CP) ./files/* $(1)/
 endef
 
-$(eval $(call BuildPackage,gluon-luci-private-wifi))
+$(eval $(call BuildPackage,gluon-luci-wifi))
