@@ -125,7 +125,7 @@ local function read_manifest(mirror)
 
   -- Read all lines from the manifest
   -- The upper part is saves to lines, the lower part to sigs
-  for line in io.popen(string.format("wget -O- '%s/%s.manifest'", mirror, branch.name), 'r'):lines() do
+  for line in io.popen(string.format("wget -T 120 -O- '%s/%s.manifest'", mirror, branch.name), 'r'):lines() do
     if not sep then
       if line == '---' then
 	sep = true
@@ -188,7 +188,7 @@ end
 
 -- Downloads the firmware image from a mirror to a given output file
 local function fetch_firmware(mirror, filename, output)
-  if os.execute(string.format("wget -O '%s' '%s/%s'", output, mirror, filename)) ~= 0 then
+  if os.execute(string.format("wget -T 120 -O '%s' '%s/%s'", output, mirror, filename)) ~= 0 then
     io.stderr:write('Error downloading the image from ' .. mirror .. '\n')
     return false
   end
