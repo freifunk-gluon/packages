@@ -1,4 +1,4 @@
-local f, s, o
+local f, s, o, p, q
 local uci = luci.model.uci.cursor()
 local config = 'wireless'
  
@@ -15,7 +15,7 @@ Mesh-Netzes zu deaktivieren. Bitte lass die SSID des Mesh-Netzes aktiviert,
 damit sich auch andere Router über dich mit dem Freifunk verbinden können.
 ]])
  
- 
+
 local radios = {}
 
 -- look for wifi interfaces and add them to the array
@@ -31,23 +31,29 @@ for index, radio in ipairs(radios) do
 	local hwmode = uci:get('wireless', radio, 'hwmode')
 	
 	if hwmode == '11g' or hwmode == '11ng' then --if 2.4GHz
+	 	
+	 	p = f:section(SimpleSection, [[2,4GHz Wlan]], nil)
+
 	 	--box for the clientnet
-		o = s:option(Flag, 'clientbox' .. index, "2,4GHz Client-Netz aktivieren")
+		o = p:option(Flag, 'clientbox' .. index, "Client-Netz aktivieren")
 		o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
 		o.rmempty = false
 		--box for the meshnet 
-		o = s:option(Flag, 'meshbox' .. index, "2,4GHz Mesh-Netz aktivieren")
-		o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
+		o = p:option(Flag, 'meshbox' .. index, "Mesh-Netz aktivieren")
+		o.default = (uci:get_bool(config, 'mesh_' .. radio, "disabled")) and o.disabled or o.enabled
 		o.rmempty = false
 	 
 	elseif hwmode == '11a' or hwmode == '11na' then --if 5GHz
+		
+		q = f:section(SimpleSection, [[5GHz Wlan]], nil)
+
 		--box for the clientnet
-		o = s:option(Flag, 'clientbox' .. index, "5GHz Client-Netz aktivieren")
+		o = q:option(Flag, 'clientbox' .. index, "Client-Netz aktivieren")
 		o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
 		o.rmempty = false
 		--box for the meshnet
-		o = s:option(Flag, 'meshbox' .. index, "5GHz Mesh-Netz aktivieren")
-		o.default = (uci:get_bool(config, 'client_' .. radio, "disabled")) and o.disabled or o.enabled
+		o = q:option(Flag, 'meshbox' .. index, "Mesh-Netz aktivieren")
+		o.default = (uci:get_bool(config, 'mesh_' .. radio, "disabled")) and o.disabled or o.enabled
 		o.rmempty = false
 	 
 	end
