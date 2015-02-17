@@ -33,5 +33,5 @@ end
 
 -- The image name for sysupgrades
 function get_image_name()
-   return (model:lower():gsub('[^%w%.]+', '-'):gsub('%.+', '.'):gsub('[%-%.]*%-[%-%.]*', '-'):gsub('%-+$', ''))
+   return (model:lower():gsub('[^%w%.%+]+', '-'):gsub('%.+', '.'):gsub('[%-%.]*%-[%-%.]*', '-'):gsub('%-+$', ''))
 end
