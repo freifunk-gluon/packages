@@ -7,6 +7,11 @@ local platform_info = require('platform_info')
 local uci = require('luci.model.uci').cursor()
 local util = require('luci.util')
 
+-- for site.site_code
+local site = require 'gluon.site_config'
+-- for sysconfig.primary_mac
+local sysconfig = require 'gluon.sysconfig'
+
 local autoupdater_util = require('autoupdater.util')
 local autoupdater_version = require('autoupdater.version')
 
@@ -123,9 +128,14 @@ local function read_manifest(mirror)
 
   local ret = {}
 
+  -- more info about the note to the update server:
+  local site = site.site_code
+  local primary_mac = sysconfig.primary_mac
+  local meshvpn_enabled = uci:get("fastd", "mesh_vpn", "enabled", "0")
+
   -- Read all lines from the manifest
   -- The upper part is saves to lines, the lower part to sigs
-  for line in io.popen(string.format("wget -T 120 -O- '%s/%s.manifest'", mirror, branch.name), 'r'):lines() do
+  for line in io.popen(string.format("wget -T 120 -O- '%s/%s.manifest?mac=%s&mesh=%s&site=%s'", mirror, branch.name, primary_mac, meshvpn_enabled, site), 'r'):lines() do
     if not sep then
       if line == '---' then
 	sep = true
