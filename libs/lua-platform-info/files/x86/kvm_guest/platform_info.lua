@@ -33,5 +33,5 @@ end
 
 -- The image name for sysupgrades
 function get_image_name()
-   return nil
+   return 'x86-kvm'
 end
