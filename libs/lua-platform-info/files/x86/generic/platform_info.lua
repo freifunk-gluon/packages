@@ -8,25 +8,7 @@ for line in io.lines('/proc/cpuinfo') do
 end
 
 
-local image_name = 'x86-generic'
-
-local f = io.open('/sys/class/dmi/id/sys_vendor')
-if f then
-  local vendor = f:read('*line')
-  f:close()
-
-  if vendor then
-    if vendor:match('^VMware') or vendor:match('^VMW') then
-      image_name = 'x86-vmware'
-    elseif vendor:match('^innotek GmbH') then
-      image_name = 'x86-virtualbox'
-    end
-  end
-end
-
-
 module 'platform_info'
-
 
 -- The OpenWrt target
 function get_target()
@@ -50,5 +32,5 @@ end
 
 -- The image name for sysupgrades
 function get_image_name()
-  return image_name
+  return 'x86-generic'
 end
