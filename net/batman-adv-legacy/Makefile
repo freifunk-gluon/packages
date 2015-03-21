@@ -22,12 +22,11 @@ PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
 BATCTL_SOURCE_URL:=http://downloads.open-mesh.org/batman/releases/batman-adv-$(BATCTL_VERSION)
 
-include $(INCLUDE_DIR)/kernel.mk
-
-PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)/$(PKG_NAME)-$(PKG_VERSION)
-PKG_BATCTL_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)/batctl-$(BATCTL_VERSION)
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)/$(PKG_NAME)-$(PKG_VERSION)
+PKG_BATCTL_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)/batctl-$(BATCTL_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
+include $(INCLUDE_DIR)/kernel.mk
 
 define KernelPackage/batman-adv-legacy
   URL:=http://www.open-mesh.org/
@@ -95,7 +94,7 @@ define Download/batctl-legacy
 endef
 $(eval $(call Download,batctl-legacy))
 
-BATCTL_EXTRACT = tar xzf "$(DL_DIR)/batctl-$(BATCTL_VERSION).tar.gz" -C "$(KERNEL_BUILD_DIR)/$(PKG_NAME)"
+BATCTL_EXTRACT = tar xzf "$(DL_DIR)/batctl-$(BATCTL_VERSION).tar.gz" -C "$(BUILD_DIR)/$(PKG_NAME)"
 BATCTL_PATCH = $(call Build/DoPatch,"$(PKG_BATCTL_BUILD_DIR)","$(PATCH_DIR)",".*batctl.*")
 BATCTL_BUILD = $(MAKE_BATCTL_ENV) $(MAKE) -C $(PKG_BATCTL_BUILD_DIR) $(MAKE_BATCTL_ARGS)
 BATCTL_INSTALL = $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/local/sbin/batctl $(1)/usr/sbin/
@@ -129,7 +128,7 @@ define Build/Compile
 endef
 
 define Build/Clean
-	rm -rf $(KERNEL_BUILD_DIR)/$(PKG_NAME)/
+	rm -rf $(BUILD_DIR)/$(PKG_NAME)/
 endef
 
 define KernelPackage/batman-adv-legacy/install
