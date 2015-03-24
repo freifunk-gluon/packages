@@ -32,54 +32,36 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
+#include "miniz.c"
+
+#define HELPER "/lib/gluon/announced/helper.lua"
 
 void usage() {
-  puts("Usage: gluon-announced [-h] -g <group> -p <port> -i <if0> [-i <if1> ..] -s <script>");
+  puts("Usage: gluon-announced [-h] -g <group> -p <port> -i <if0> [-i <if1> ..]");
   puts("  -g <ip6>         multicast group, e.g. ff02:0:0:0:0:0:2:1001");
   puts("  -p <int>         port number to listen on");
   puts("  -i <string>      interface on which the group is joined");
-  puts("  -s <string>      script to be executed for each request");
   puts("  -h               this help\n");
 }
 
-/* The maximum size of output returned is limited to 8192 bytes (including
- * terminating null byte) for now. If this turns out to be problem, a
- * dynamic buffer should be implemented instead of increasing the
- * limit.
- */
-#define BUFFER 8192
+int l_deflate(lua_State *L) {
+  size_t in_length, out_length;
+  char *in, *out;
 
-char *run_script(size_t *length, const char *script) {
-  FILE *f;
-  char *buffer;
+  in = luaL_checklstring(L, -1, &in_length);
 
-  buffer = calloc(BUFFER, sizeof(char));
+  out_length = in_length * 2;
+  out = malloc(out_length);
 
-  if (buffer == NULL) {
-    fprintf(stderr, "couldn't allocate buffer\n");
-    return NULL;
-  }
+  compress(out, &out_length, in, in_length);
 
-  f = popen(script, "r");
+  lua_pushlstring(L, out, out_length);
+  free(out);
 
-  size_t read_bytes = 0;
-  while (1) {
-    ssize_t ret = fread(buffer+read_bytes, sizeof(char), BUFFER-read_bytes, f);
-
-    if (ret <= 0)
-      break;
-
-    read_bytes += ret;
-  }
-
-  int ret = pclose(f);
-
-  if (ret != 0)
-    fprintf(stderr, "script exited with status %d\n", ret);
-
-  *length = read_bytes;
-
-  return buffer;
+  return 1;
 }
 
 void join_mcast(const int sock, const struct in6_addr addr, const char *iface) {
@@ -102,7 +84,7 @@ error:
   return;
 }
 
-#define REQUESTSIZE 64
+#define REQUESTSIZE 256
 
 char *recvrequest(const int sock, struct sockaddr *client_addr, socklen_t *clilen) {
   char request_buffer[REQUESTSIZE];
@@ -120,10 +102,10 @@ char *recvrequest(const int sock, struct sockaddr *client_addr, socklen_t *clile
   if (request == NULL)
     perror("Could not receive request");
 
-  return strsep(&request, "\r\n\t ");
+  return request;
 }
 
-void serve(const int sock, const char *script) {
+void serve(const int sock, lua_State *L) {
   char *request;
   socklen_t clilen;
   struct sockaddr_in6 client_addr;
@@ -133,29 +115,36 @@ void serve(const int sock, const char *script) {
   while (1) {
     request = recvrequest(sock, (struct sockaddr*)&client_addr, &clilen);
 
-    int cmp = strcmp(request, "nodeinfo");
+    lua_getglobal(L, "request");
+    lua_pushstring(L, request);
     free(request);
 
-    if (cmp != 0)
-      continue;
+    if (lua_pcall(L, 1, 1, 0)) {
+      perror("pcall on request failed");
+      exit(EXIT_FAILURE);
+    }
 
-    char *msg;
+    const char *msg;
     size_t msg_length;
-    msg = run_script(&msg_length, script);
+    msg = lua_tolstring(L, -1, &msg_length);
+
+    if (msg == NULL) {
+      lua_pop(L, -1);
+      continue;
+    }
 
     if (sendto(sock, msg, msg_length, 0, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0) {
       perror("sendto failed");
       exit(EXIT_FAILURE);
     }
 
-    free(msg);
+    lua_pop(L, -1);
   }
 }
 
 int main(int argc, char **argv) {
   int sock;
   struct sockaddr_in6 server_addr = {};
-  char *script = NULL;
   struct in6_addr mgroup_addr;
 
   sock = socket(PF_INET6, SOCK_DGRAM, 0);
@@ -173,7 +162,7 @@ int main(int argc, char **argv) {
   int group_set = 0;
 
   int c;
-  while ((c = getopt(argc, argv, "p:g:s:i:h")) != -1)
+  while ((c = getopt(argc, argv, "p:g:i:h")) != -1)
     switch (c) {
       case 'p':
         server_addr.sin6_port = htons(atoi(optarg));
@@ -185,10 +174,6 @@ int main(int argc, char **argv) {
         }
 
         group_set = 1;
-        break;
-      case 's':
-        script = optarg;
-
         break;
       case 'i':
         if (!group_set) {
@@ -205,17 +190,28 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Invalid parameter %c ignored.\n", c);
     }
 
-  if (script == NULL) {
-    fprintf(stderr, "No script given\n");
-    exit(EXIT_FAILURE);
-  }
-
   if (bind(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
     perror("bind failed");
     exit(EXIT_FAILURE);
   }
 
-  serve(sock, script);
+  lua_State *L = lua_open();
+  luaL_openlibs(L);
+
+  lua_pushcfunction(L, l_deflate);
+  lua_setglobal(L, "deflate");
+
+  if (luaL_loadfile(L, HELPER)) {
+    perror("Could not load helper.lua");
+    exit(EXIT_FAILURE);
+  }
+
+  if (lua_pcall(L, 0, 0, 0)) {
+    perror("pcall failed");
+    exit(EXIT_FAILURE);
+  }
+
+  serve(sock, L);
 
   return EXIT_FAILURE;
 }

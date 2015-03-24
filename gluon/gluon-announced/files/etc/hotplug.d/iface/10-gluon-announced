@@ -21,7 +21,7 @@ restart_announced () {
 	DEVS=$(cat $DEVLIST | while read dev iface;do echo -n " -i $dev";done)
 
 	service_stop $DAEMON
-	service_start $DAEMON -g ff02:0:0:0:0:0:2:1001 -p 1001 -s '/lib/gluon/announce/collect.lua nodeinfo' $DEVS
+	service_start $DAEMON -g ff02:0:0:0:0:0:2:1001 -p 1001 $DEVS
 }
 
 case "$ACTION" in
@@ -32,7 +32,7 @@ case "$ACTION" in
 		DEVICE=$(ifname_to_dev $INTERFACE)
 		MESH=$(cat /sys/class/net/$DEVICE/batman_adv/mesh_iface)
 
-		[ $MESH = "bat0" ] || exit 0
+		[ $MESH = "bat0" -o $INTERFACE = "client" ] || exit 0
 
 		DEVS="$(cat $DEVLIST; echo $DEVICE $INTERFACE)"
 
