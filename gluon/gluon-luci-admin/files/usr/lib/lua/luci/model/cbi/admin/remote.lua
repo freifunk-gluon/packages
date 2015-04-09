@@ -64,7 +64,7 @@ m2.pageaction = false
 m2.template = "admin/expertmode"
 
 local s = m2:section(TypedSection, "_dummy2", nil,
-[[Alternativ kannst du auch ein Passwort setzen. Wähle bitte ein sicheres Passwort, das du nirgendwo anders verwendest.<br /><br />
+[[Alternativ kannst du auch ein Passwort setzen. Wähle unbedingt ein sicheres Passwort mit mindestens 12 Buchstaben und Zahlen, das du nirgendswo anders verwendest.<br /><br />
 Beim Setzen eines leeren Passworts wird der Login per Passwort gesperrt (dies ist die Standard-Einstellung).]])
 
 s.addremove = false
