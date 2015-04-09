@@ -88,9 +88,9 @@ uci:foreach('wireless', 'wifi-device',
 for index, radio in ipairs(radios) do
 	local hwmode = uci:get('wireless', radio, 'hwmode')
 
-	if hwmode == '11g' or hwmode == '11ng' then
+	if hwmode == '11g' then
 	  configure_radio(radio, index, site.wifi24)
-	elseif hwmode == '11a' or hwmode == '11na' then
+	elseif hwmode == '11a' then
 	  configure_radio(radio, index, site.wifi5)
 	end
 end
