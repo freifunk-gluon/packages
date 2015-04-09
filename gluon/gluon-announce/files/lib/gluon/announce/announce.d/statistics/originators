@@ -1,0 +1,22 @@
+local originators = io.lines ('/sys/kernel/debug/batman_adv/bat0/originators')
+local orig = {}
+local arr = {}
+local direct_vpn=false
+
+for o in originators do
+	if o:find('%[%s*mesh%-vpn%]:') then
+		direct_vpn=true
+	else
+		table.insert (arr, o)
+	end
+end
+for i=3,#arr do
+	local t={}                                                 
+       	for a in arr[i]:gmatch("%S+") do                                  
+        	table.insert(t,a)                                  
+        end                                                          
+        if (direct_vpn==true and t[6]:find('wlan[0-9%-]*')~=nil) or (direct_vpn==false and t[1]==t[4]) then 
+           table.insert(orig,{t[1],t[3]:match("%d+")})         
+        end
+end
+return orig
