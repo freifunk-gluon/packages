@@ -1,0 +1,54 @@
+#!/usr/bin/lua
+
+local site = require 'gluon.site_config'
+local util = require 'gluon.util'
+
+local uci = require('luci.model.uci').cursor()
+
+
+local function configure_radio(radio, index, config)
+  local client = 'client_' .. radio
+
+  local client_ifname
+  local radio_suffix = radio:match('^radio(%d+)$')
+  if radio_suffix then
+    client_ifname = 'client' .. radio_suffix
+  end
+
+  uci:delete('wireless', client)
+  uci:section('wireless', 'wifi-iface', client,
+              {
+                device = radio,
+                network = 'client',
+                mode = 'ap',
+                ssid = config.ssid,
+                macaddr = util.generate_mac(2, index),
+                ifname = client_ifname,
+              }
+  )
+end
+
+
+local radios = {}
+
+uci:foreach('wireless', 'wifi-device',
+            function(s)
+              table.insert(radios, s['.name'])
+            end
+)
+
+for index, radio in ipairs(radios) do
+        local hwmode = uci:get('wireless', radio, 'hwmode')
+
+        if hwmode == '11g' then
+          configure_radio(radio, index, site.wifi24)
+        elseif hwmode == '11a' then
+          configure_radio(radio, index, site.wifi5)
+        end
+end
+
+
+uci:save('wireless')
+uci:save('network')
+uci:commit('wireless')
+uci:commit('network')
