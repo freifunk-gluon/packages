@@ -31,9 +31,13 @@ s = f:section(SimpleSection, nil, nil)
 o = s:option(ListValue, "ipv4", "IPv4")
 o:value("dhcp", "Automatisch (DHCP)")
 o:value("static", "Statisch")
+o:value("pppoe", "PPPoE")
 o:value("none", "Deaktiviert")
 o.default = wan.proto
 
+--[[
+IPv4
+]]--
 o = s:option(Value, "ipv4_addr", "IP-Adresse")
 o:depends("ipv4", "static")
 o.value = wan.ipaddr
@@ -52,6 +56,26 @@ o.value = wan.gateway
 o.datatype = "ip4addr"
 o.rmempty = false
 
+--[[
+PPPoE
+]]--
+o = s:option(Value, "ipv4_user", "Benutzer")
+o:depends("ipv4", "pppoe")
+o.value = wan.username
+o.datatype = "string"
+o.rmempty = false
+
+o = s:option(Value, "ipv4_service", "Service")
+o:depends("ipv4", "static")
+o.value = wan.service
+o.datatype = "string"
+o.rmempty = true
+
+o = s:option(Value, "ipv4_pass", "Passwort")
+o:depends("ipv4", "pppoe")
+o.value = wan.password
+o.datatype = "string"
+o.rmempty = false
 
 s = f:section(SimpleSection, nil, nil)
 
@@ -88,17 +112,31 @@ o = s:option(Flag, "mesh_wan", "Mesh auf dem WAN-Port aktivieren")
 o.default = uci:get_bool("network", "mesh_wan", "auto") and o.enabled or o.disabled
 o.rmempty = false
 
+s = f:section(SimpleSection, nil, nil)
+
+o = s:option(Flag, "intern_lan", "Internes Netz auf den LAN-Ports aktivieren")
+o.default = uci:get_bool("network", "intern_lan", "auto") and o.enabled or o.disabled
+o.rmempty = false
+
 function f.handle(self, state, data)
   if state == FORM_VALID then
     uci:set("network", "wan", "proto", data.ipv4)
+
+    uci:delete("network", "wan", "username")
+    uci:delete("network", "wan", "service")
+    uci:delete("network", "wan", "password")
+    uci:delete("network", "wan", "ipaddr")
+    uci:delete("network", "wan", "netmask")
+    uci:delete("network", "wan", "gateway")
+
     if data.ipv4 == "static" then
       uci:set("network", "wan", "ipaddr", data.ipv4_addr)
       uci:set("network", "wan", "netmask", data.ipv4_netmask)
       uci:set("network", "wan", "gateway", data.ipv4_gateway)
-    else
-      uci:delete("network", "wan", "ipaddr")
-      uci:delete("network", "wan", "netmask")
-      uci:delete("network", "wan", "gateway")
+    elseif data.ipv4 == "pppoe" then
+      uci:set("network", "wan", "username", data.ipv4_user)
+      uci:set("network", "wan", "service", data.ipv4_service)
+      uci:set("network", "wan", "password", data.ipv4_password)
     end
 
     uci:set("network", "wan6", "proto", data.ipv6)
@@ -111,6 +149,7 @@ function f.handle(self, state, data)
     end
 
     uci:set("network", "mesh_wan", "auto", data.mesh_wan)
+    uci:set("network", "intern_lan", "auto", data.intern_lan)
 
     uci:save("network")
     uci:commit("network")
