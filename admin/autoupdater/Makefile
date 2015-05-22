@@ -10,7 +10,7 @@ include $(GLUONDIR)/include/package.mk
 define Package/autoupdater
   SECTION:=admin
   CATEGORY:=Administration
-  DEPENDS:=+lua-platform-info +luci-lib-nixio +ecdsautils +!BUSYBOX_CONFIG_SHA512SUM:coreutils-sha512sum
+  DEPENDS:=+lua-platform-info +luci-base +ecdsautils +!BUSYBOX_CONFIG_SHA512SUM:coreutils-sha512sum
   TITLE:=Automatically update firmware
 endef
 

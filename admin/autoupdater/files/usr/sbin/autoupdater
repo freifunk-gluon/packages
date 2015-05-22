@@ -1,8 +1,8 @@
 #!/usr/bin/lua
 
 
-local fs = require('luci.fs')
 local nixio = require('nixio')
+local fs = require('nixio.fs')
 local platform_info = require('platform_info')
 local uci = require('luci.model.uci').cursor()
 local util = require('luci.util')
