@@ -1,0 +1,71 @@
+From e718de23e6cf05c75d3cd352de3ae50ff40adbef Mon Sep 17 00:00:00 2001
+Message-Id: <e718de23e6cf05c75d3cd352de3ae50ff40adbef.1435784617.git.mschiffer@universe-factory.net>
+In-Reply-To: <704e64165f8d37c42fd13652cf8b1c0f56f37cd6.1435784617.git.mschiffer@universe-factory.net>
+References: <704e64165f8d37c42fd13652cf8b1c0f56f37cd6.1435784617.git.mschiffer@universe-factory.net>
+From: Sven Eckelmann <sven@narfation.org>
+Date: Tue, 10 Sep 2013 23:11:53 +0200
+Subject: [PATCH 3/3] batctl: Fix inconsistent use of _GNU_SOURCE
+
+Either all or no source file should define _GNU_SOURCE to avoid incompatible
+types or function declarations.
+
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Signed-off-by: Marek Lindner <mareklindner@neomailbox.ch>
+---
+ Makefile    | 1 +
+ bat-hosts.c | 1 -
+ functions.c | 1 -
+ vis.c       | 1 -
+ 4 files changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 233f453..9e7c5be 100755
+--- a/Makefile
++++ b/Makefile
+@@ -30,6 +30,7 @@ MANPAGE = man/batctl.8
+ 
+ # batctl flags and options
+ CFLAGS += -pedantic -Wall -W -std=gnu99 -fno-strict-aliasing -MD
++CPPFLAGS += -D_GNU_SOURCE
+ LDLIBS += -lm
+ 
+ # disable verbose output
+diff --git a/bat-hosts.c b/bat-hosts.c
+index 04e7a9b..053c26f 100644
+--- a/bat-hosts.c
++++ b/bat-hosts.c
+@@ -21,7 +21,6 @@
+ 
+ 
+ 
+-#define _GNU_SOURCE
+ #include <stdio.h>
+ #include <stdint.h>
+ #include <limits.h>
+diff --git a/functions.c b/functions.c
+index cc05a48..66f9a7d 100644
+--- a/functions.c
++++ b/functions.c
+@@ -20,7 +20,6 @@
+  */
+ 
+ 
+-#define _GNU_SOURCE
+ #include <netinet/ether.h>
+ #include <arpa/inet.h>
+ #include <sys/socket.h>
+diff --git a/vis.c b/vis.c
+index 33c7a7f..add93fd 100644
+--- a/vis.c
++++ b/vis.c
+@@ -19,7 +19,6 @@
+  *
+  */
+ 
+-#define _GNU_SOURCE
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <stdint.h>
+-- 
+2.4.5
+

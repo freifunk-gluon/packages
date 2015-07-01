@@ -11,6 +11,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=batman-adv-legacy
 
 PKG_VERSION:=2015-01-11
+PKG_RELEASE:=2
 BATCTL_VERSION:=2013.4.0
 BATCTL_MD5SUM:=42e269cc710bbc9a8fd17628201d4258
 
@@ -95,7 +96,7 @@ endef
 $(eval $(call Download,batctl-legacy))
 
 BATCTL_EXTRACT = tar xzf "$(DL_DIR)/batctl-$(BATCTL_VERSION).tar.gz" -C "$(BUILD_DIR)/$(PKG_NAME)"
-BATCTL_PATCH = $(call Build/DoPatch,"$(PKG_BATCTL_BUILD_DIR)","$(PATCH_DIR)",".*batctl.*")
+BATCTL_PATCH = $(call Build/DoPatch,"$(PKG_BATCTL_BUILD_DIR)","$(PATCH_DIR)",batctl)
 BATCTL_BUILD = $(MAKE_BATCTL_ENV) $(MAKE) -C $(PKG_BATCTL_BUILD_DIR) $(MAKE_BATCTL_ARGS)
 BATCTL_INSTALL = $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/local/sbin/batctl $(1)/usr/sbin/
 endif
@@ -103,14 +104,14 @@ endif
 KPATCH ?= $(PATCH)
 define Build/DoPatch
 	@if [ -d "$(2)" ]; then \
-		if [ "$$$$(ls $(2) | grep -Ec $(3))" -gt 0 ]; then \
-			$(KPATCH) "$(1)" "$(2)" "$(3)"; \
+		if [ "$$$$(ls $(2) | grep -Ec ',*$(3).*')" -gt 0 ]; then \
+			$(KPATCH) "$(1)" "$(2)" "*$(3)*"; \
 		fi; \
 	fi
 endef
 
 define Build/Patch
-	$(call Build/DoPatch,"$(PKG_BUILD_DIR)","$(PATCH_DIR)",".*batman.*")
+	$(call Build/DoPatch,"$(PKG_BUILD_DIR)","$(PATCH_DIR)",batman)
 	$(BATCTL_EXTRACT)
 	$(BATCTL_PATCH)
 endef
