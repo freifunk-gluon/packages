@@ -547,7 +547,7 @@ static void send_advert(void) {
 
 
 static void usage(void) {
-	fprintf(stderr, "Usage: gluon-radvd [-h] -i <interface> -a/-p <prefix> [ -a/-p <prefix> ... ]\n");
+	fprintf(stderr, "Usage: uradvd [-h] -i <interface> -a/-p <prefix> [ -a/-p <prefix> ... ]\n");
 }
 
 static void add_prefix(const char *prefix, bool adv_onlink) {

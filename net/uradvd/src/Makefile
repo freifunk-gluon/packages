@@ -1,4 +1,4 @@
-all: gluon-radvd
+all: uradvd
 
-gluon-radvd: gluon-radvd.c
+uradvd: uradvd.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -Wall -o $@ $^ $(LDLIBS) -lrt
