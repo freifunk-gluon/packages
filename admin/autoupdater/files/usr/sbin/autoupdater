@@ -4,8 +4,7 @@
 local nixio = require('nixio')
 local fs = require('nixio.fs')
 local platform_info = require('platform_info')
-local uci = require('luci.model.uci').cursor()
-local util = require('luci.util')
+local uci = require('uci').cursor()
 
 local autoupdater_util = require('autoupdater.util')
 local autoupdater_version = require('autoupdater.version')
@@ -23,7 +22,9 @@ autoupdater_util.randomseed()
 local settings = uci:get_all('autoupdater', 'settings')
 local branch_name = settings.branch
 
-local old_version = util.trim(fs.readfile(settings.version_file) or '')
+local version_file = io.open(settings.version_file)
+local old_version = version_file and version_file:read('*l') or ''
+version_file:close()
 
 
 -- If force is true the updater will perform an upgrade regardless of
@@ -265,7 +266,9 @@ local function autoupdate(mirror)
     return false
   end
 
-  local checksum = util.exec(string.format("sha512sum '%s'", image)):match('^%x+')
+  local popen = io.popen(string.format("sha512sum '%s'", image))
+  local checksum = popen:read('*l'):match('^%x+')
+  popen:close()
   if checksum ~= manifest.checksum then
     io.stderr:write('Invalid image checksum!\n')
     os.remove(image)
