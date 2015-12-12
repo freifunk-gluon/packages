@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <arpa/inet.h>
@@ -71,6 +72,7 @@ static void join_mcast(const int sock, const struct in6_addr addr, const char *i
 static void serve(lua_State *L, int sock) {
   char buffer[256];
   ssize_t read_bytes;
+  struct timespec tp;
 
   lua_pushvalue(L, -1);
 
@@ -84,9 +86,12 @@ static void serve(lua_State *L, int sock) {
     exit(EXIT_FAILURE);
   }
 
-  lua_pushlstring(L, buffer, read_bytes);
+  clock_gettime(CLOCK_MONOTONIC, &tp);
 
-  if (lua_pcall(L, 1, 1, 0)) {
+  lua_pushlstring(L, buffer, read_bytes);
+  lua_pushnumber(L, tp.tv_sec + 1.0e-9*tp.tv_nsec);
+
+  if (lua_pcall(L, 2, 1, 0)) {
     fprintf(stderr, "%s\n", lua_tostring(L, -1));
   }
   else if (lua_isstring(L, -1)) {
