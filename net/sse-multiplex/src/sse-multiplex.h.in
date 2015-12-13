@@ -1,0 +1,4 @@
+#pragma once
+
+
+#define SSE_MULTIPLEX_SOCKET "@SSE_MULTIPLEX_SOCKET@"
