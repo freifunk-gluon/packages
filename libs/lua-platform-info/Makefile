@@ -1,5 +1,4 @@
 include $(TOPDIR)/rules.mk
-include $(INCLUDE_DIR)/target.mk
 
 PKG_NAME:=lua-platform-info
 PKG_VERSION:=1
@@ -12,26 +11,26 @@ define Package/lua-platform-info
   SECTION:=libs
   CATEGORY:=Libraries
   TITLE:=Lua hardware platform information library
-  DEPENDS:=+lua @(TARGET_ar71xx_generic||TARGET_ar71xx_nand||TARGET_mpc85xx_generic||TARGET_x86_generic||TARGET_x86_kvm_guest||TARGET_x86_64||TARGET_x86_xen_domu||TARGET_ramips_rt305x||TARGET_brcm2708_bcm2708||TARGET_brcm2708_bcm2709||TARGET_sunxi)
-endef
-
-define Package/lua-platform-info/description
-	Lua library to obtain some generic information about the runtime platform
+  DEPENDS:=+lua +libplatforminfo
 endef
 
 define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
+	$(CP) ./src/* $(PKG_BUILD_DIR)/
 endef
 
 define Build/Configure
 endef
 
 define Build/Compile
+	CFLAGS="$(TARGET_CFLAGS)" \
+	CPPFLAGS="$(TARGET_CPPFLAGS)" \
+	$(MAKE) -C $(PKG_BUILD_DIR) $(TARGET_CONFIGURE_OPTS)
 endef
 
 define Package/lua-platform-info/install
 	$(INSTALL_DIR) $(1)/usr/lib/lua
-	$(INSTALL_DATA) ./files/$(BOARD)$(if $(SUBTARGET),/$(SUBTARGET))/platform_info.lua $(1)/usr/lib/lua/
+	$(CP) $(PKG_BUILD_DIR)/platform_info.so $(1)/usr/lib/lua/
 endef
 
 $(eval $(call BuildPackage,lua-platform-info))
