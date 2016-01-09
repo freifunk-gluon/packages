@@ -47,8 +47,8 @@ local function parse_args()
       i = i+1
 
       if not arg[i] then
-	io.stderr:write("Error parsing command line: expected branch name\n")
-	os.exit(1)
+        io.stderr:write("Error parsing command line: expected branch name\n")
+        os.exit(1)
       end
 
       branch_name = arg[i]
@@ -129,27 +129,27 @@ local function read_manifest(mirror)
   for line in io.popen(string.format("wget -T 120 -O- '%s/%s.manifest'", mirror, branch.name), 'r'):lines() do
     if not sep then
       if line == '---' then
-	sep = true
+        sep = true
       else
-	table.insert(lines, line)
+        table.insert(lines, line)
 
-	if line == ('BRANCH=' .. branch.name) then
-	  branch_ok = true
-	end
+        if line == ('BRANCH=' .. branch.name) then
+          branch_ok = true
+        end
 
-	local date = line:match('^DATE=(.+)$')
-	local priority = line:match('^PRIORITY=([%d%.]+)$')
-	local model, version, checksum, filename = line:match('^([^ ]+) ([^ ]+) ([^ ]+) ([^ ]+)$')
+        local date = line:match('^DATE=(.+)$')
+        local priority = line:match('^PRIORITY=([%d%.]+)$')
+        local model, version, checksum, filename = line:match('^([^ ]+) ([^ ]+) ([^ ]+) ([^ ]+)$')
 
-	if date then
-	  ret.date = autoupdater_util.parse_date(date)
-	elseif priority then
-	  ret.priority = tonumber(priority)
-	elseif model == platform_info.get_image_name() then
-	  ret.version = version
-	  ret.checksum = checksum
-	  ret.filename = filename
-	end
+        if date then
+          ret.date = autoupdater_util.parse_date(date)
+        elseif priority then
+          ret.priority = tonumber(priority)
+        elseif model == platform_info.get_image_name() then
+          ret.version = version
+          ret.checksum = checksum
+          ret.filename = filename
+        end
       end
     else
       table.insert(sigs, line)
