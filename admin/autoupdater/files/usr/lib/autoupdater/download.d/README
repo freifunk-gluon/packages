@@ -1,0 +1,2 @@
+Executable files in download.d will be executed after the update manifest
+has been verified, but before the actual image is downloaded.

@@ -241,6 +241,10 @@ end
 
 -- Tries to perform an update from a given mirror
 local function autoupdate(mirror)
+  local download_d_dir = '/usr/lib/autoupdater/download.d'
+  local abort_d_dir = '/usr/lib/autoupdater/abort.d'
+
+
   local manifest = read_manifest(mirror)
   if not manifest then
     return false
@@ -259,13 +263,12 @@ local function autoupdate(mirror)
     return true
   end
 
-
-  autoupdater_util.exec('sync')
-  autoupdater_util.exec('sysctl', '-w', 'vm.drop_caches=3')
+  autoupdater_util.run_dir(download_d_dir)
   collectgarbage()
 
   local image = os.tmpname()
   if not fetch_firmware(mirror, manifest.filename, image) then
+    autoupdater_util.run_dir(abort_d_dir)
     return false
   end
 
@@ -275,6 +278,7 @@ local function autoupdate(mirror)
   if checksum ~= manifest.checksum then
     io.stderr:write('Invalid image checksum!\n')
     os.remove(image)
+    autoupdater_util.run_dir(abort_d_dir)
     return false
   end
 
@@ -294,6 +298,7 @@ local function autoupdate(mirror)
   -- We output the error message through stdout as stderr isn't available anymore
   io.write('Failed to call sysupgrade?\n')
   os.remove(image)
+  autoupdater_util.run_dir(abort_d_dir)
   os.exit(1)
 end
 
