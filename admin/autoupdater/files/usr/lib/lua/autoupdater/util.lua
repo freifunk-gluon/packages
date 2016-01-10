@@ -6,8 +6,23 @@ local nixio = require 'nixio'
 module 'autoupdater.util'
 
 
+-- Executes a command in the background, without parsing the command through a shell (in contrast to os.execute)
+function exec(...)
+  local pid, errno, error = nixio.fork()
+  if pid == 0 then
+    nixio.execp(...)
+    os.exit(127)
+  elseif pid > 0 then
+    local wpid, status, code = nixio.waitpid(pid)
+    return wpid and status == 'exited' and code
+  else
+    return pid, errno, error
+  end
+end
+
+
 -- Executes a command in the background, returning its PID and a pipe connected to the command's standard input
-function popen(command)
+function popen(...)
   local inr, inw = nixio.pipe()
   local pid = nixio.fork()
 
@@ -21,7 +36,8 @@ function popen(command)
     inr:close()
     inw:close()
 
-    nixio.exec('/bin/sh', '-c', command)
+    nixio.execp(...)
+    os.exit(127)
   end
 end
 
