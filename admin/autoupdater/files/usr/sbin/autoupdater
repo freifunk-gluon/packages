@@ -80,24 +80,26 @@ end
 
 -- Verifies a file given as a list of lines with a list of signatures using ecdsaverify
 local function verify_lines(lines, sigs)
-  local command = string.format('ecdsaverify -n %i', branch.good_signatures)
+  local command = {'ecdsaverify', '-n', tostring(branch.good_signatures)}
 
   -- Build command line from sigs and branch.pubkey
   for _, sig in ipairs(sigs) do
     if sig:match('^' .. string.rep('%x', 128) .. '$') then
-      command = command .. ' -s ' .. sig
+      table.insert(command, '-s')
+      table.insert(command, sig)
     end
   end
 
   for _, key in ipairs(branch.pubkey) do
     if key:match('^' .. string.rep('%x', 64) .. '$') then
-      command = command .. ' -p ' .. key
+      table.insert(command, '-p')
+      table.insert(command, key)
     end
   end
 
 
   -- Call ecdsautils
-  local pid, f = autoupdater_util.popen(command)
+  local pid, f = autoupdater_util.popen(unpack(command))
 
   for _, line in ipairs(lines) do
     f:write(line)
@@ -126,7 +128,7 @@ local function read_manifest(mirror)
 
   -- Read all lines from the manifest
   -- The upper part is saves to lines, the lower part to sigs
-  for line in io.popen(string.format("wget -T 120 -O- '%s/%s.manifest'", mirror, branch.name), 'r'):lines() do
+  for line in io.popen(string.format("exec wget -T 120 -O- '%s/%s.manifest'", mirror, branch.name), 'r'):lines() do
     if not sep then
       if line == '---' then
         sep = true
@@ -189,7 +191,7 @@ end
 
 -- Downloads the firmware image from a mirror to a given output file
 local function fetch_firmware(mirror, filename, output)
-  if os.execute(string.format("wget -T 120 -O '%s' '%s/%s'", output, mirror, filename)) ~= 0 then
+  if autoupdater_util.exec('wget', '-T', '120', '-O', output, mirror .. '/' .. filename) ~= 0 then
     io.stderr:write('Error downloading the image from ' .. mirror .. '\n')
     return false
   end
@@ -239,6 +241,10 @@ end
 
 -- Tries to perform an update from a given mirror
 local function autoupdate(mirror)
+  local download_d_dir = '/usr/lib/autoupdater/download.d'
+  local abort_d_dir = '/usr/lib/autoupdater/abort.d'
+
+
   local manifest = read_manifest(mirror)
   if not manifest then
     return false
@@ -257,21 +263,22 @@ local function autoupdate(mirror)
     return true
   end
 
-
-  os.execute('sync; sysctl -w vm.drop_caches=3')
+  autoupdater_util.run_dir(download_d_dir)
   collectgarbage()
 
   local image = os.tmpname()
   if not fetch_firmware(mirror, manifest.filename, image) then
+    autoupdater_util.run_dir(abort_d_dir)
     return false
   end
 
-  local popen = io.popen(string.format("sha512sum '%s'", image))
+  local popen = io.popen(string.format("exec sha512sum '%s'", image))
   local checksum = popen:read('*l'):match('^%x+')
   popen:close()
   if checksum ~= manifest.checksum then
     io.stderr:write('Invalid image checksum!\n')
     os.remove(image)
+    autoupdater_util.run_dir(abort_d_dir)
     return false
   end
 
@@ -291,6 +298,7 @@ local function autoupdate(mirror)
   -- We output the error message through stdout as stderr isn't available anymore
   io.write('Failed to call sysupgrade?\n')
   os.remove(image)
+  autoupdater_util.run_dir(abort_d_dir)
   os.exit(1)
 end
 

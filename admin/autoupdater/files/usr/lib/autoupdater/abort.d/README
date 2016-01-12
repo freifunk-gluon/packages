@@ -1,0 +1,6 @@
+Executable files in abort.d will be executed if downloading the upgrade
+image has failed and should revert the actions from download.d.
+
+We can't really do anything when the download has succeeded, but the
+flashing has failed, as the autoupdater process will have been replaced by
+sysupgrade by then.
