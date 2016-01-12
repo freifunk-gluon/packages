@@ -236,7 +236,7 @@ static void remove_provider(provider_t *p) {
 }
 
 static void add_client(provider_t *p, FILE *file) {
-        if (fputs(p->header, file) == EOF || fflush(file) == EOF) {
+        if (fputs(p->header, file) == EOF || fflush(file) == EOF || ferror(file)) {
                 fclose(file);
                 return;
         }
@@ -414,6 +414,8 @@ static void handle_accept(uint32_t events) {
                 fclose(file);
                 return;
         }
+
+        fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
 
         provider_t *p = get_provider(command);
         if (!p) {
