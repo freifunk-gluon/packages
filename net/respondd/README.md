@@ -1,5 +1,5 @@
 respondd providers are C modules (shared objects). These modules should include
-<json-c/json.h> and <respondd.h>, the latter of which provides the following definitions:
+\<json-c/json.h> and \<respondd.h>, the latter of which provides the following definitions:
 
         typedef struct json_object * (*respondd_provider)(void);
 
