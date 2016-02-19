@@ -1,0 +1,3 @@
+Executable files in upgrade.d will be executed directly before the sysupgrade
+will be started. Downloading the upgrade image was successful and the
+checksum was correct.

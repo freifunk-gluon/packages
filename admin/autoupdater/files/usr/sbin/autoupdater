@@ -243,6 +243,7 @@ end
 local function autoupdate(mirror)
   local download_d_dir = '/usr/lib/autoupdater/download.d'
   local abort_d_dir = '/usr/lib/autoupdater/abort.d'
+  local upgrade_d_dir = '/usr/lib/autoupdater/upgrade.d'
 
 
   local manifest = read_manifest(mirror)
@@ -281,6 +282,8 @@ local function autoupdate(mirror)
     autoupdater_util.run_dir(abort_d_dir)
     return false
   end
+
+  autoupdater_util.run_dir(upgrade_d_dir)
 
   io.stderr:write('Upgrading firmware...\n')
   local null = nixio.open('/dev/null', 'w+')
