@@ -30,6 +30,8 @@
 #include <error.h>
 #include <ifaddrs.h>
 #include <fcntl.h>
+#include <getopt.h>
+#include <limits.h>
 #include <poll.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -98,12 +100,15 @@ static struct global {
 
 	const char *ifname;
 
+	uint16_t adv_default_lifetime;
+
 	size_t n_prefixes;
 	struct in6_addr prefixes[MAX_PREFIXES];
 	bool prefixes_onlink[MAX_PREFIXES];
 } G = {
 	.rtnl_sock = -1,
 	.icmp_sock = -1,
+	.adv_default_lifetime = AdvDefaultLifetime,
 };
 
 
@@ -473,7 +478,7 @@ static void send_advert(void) {
 	struct nd_router_advert advert = {
 		.nd_ra_hdr = {
 			.icmp6_type = ND_ROUTER_ADVERT,
-			.icmp6_dataun.icmp6_un_data8 = {AdvCurHopLimit, 0 /* Flags */, (AdvDefaultLifetime>>8) & 0xff, AdvDefaultLifetime & 0xff },
+			.icmp6_dataun.icmp6_un_data8 = {AdvCurHopLimit, 0 /* Flags */, (G.adv_default_lifetime>>8) & 0xff, G.adv_default_lifetime & 0xff },
 		},
 	};
 
@@ -547,7 +552,7 @@ static void send_advert(void) {
 
 
 static void usage(void) {
-	fprintf(stderr, "Usage: uradvd [-h] -i <interface> -a/-p <prefix> [ -a/-p <prefix> ... ]\n");
+	fprintf(stderr, "Usage: uradvd [-h] -i <interface> -a/-p <prefix> [ -a/-p <prefix> ... ] [ --default-lifetime <seconds> ]\n");
 }
 
 static void add_prefix(const char *prefix, bool adv_onlink) {
@@ -583,8 +588,29 @@ static void add_prefix(const char *prefix, bool adv_onlink) {
 
 static void parse_cmdline(int argc, char *argv[]) {
 	int c;
-	while ((c = getopt(argc, argv, "i:a:p:h")) != -1) {
+	char *endptr;
+	unsigned long val;
+
+	static struct option long_options[] =
+	{
+		{"default-lifetime", required_argument, 0, 0},
+		{0, 0, 0, 0}
+	};
+
+	int option_index = 0;
+
+	while ((c = getopt_long(argc, argv, "i:a:p:h", long_options, &option_index)) != -1) {
 		switch(c) {
+		case 0: // --default-lifetime
+			val = strtoul(optarg, &endptr, 0);
+
+			if (!*optarg || *endptr || val > UINT16_MAX)
+				error(1, 0, "%s", "Invalid default lifetime");
+
+			G.adv_default_lifetime = val;
+
+			break;
+
 		case 'i':
 			if (G.ifname)
 				error(1, 0, "multiple interfaces are not supported.");
