@@ -59,12 +59,14 @@
 
 
 #define MAX_PREFIXES 8
+#define MAX_RDNSS 3
 
 /* These are in seconds */
 #define AdvValidLifetime 86400u
 #define AdvPreferredLifetime 14400u
 #define AdvDefaultLifetime 0u
 #define AdvCurHopLimit 64u
+#define AdvRDNSSLifetime 1200u
 
 #define MinRtrAdvInterval 200u
 #define MaxRtrAdvInterval 600u
@@ -88,6 +90,13 @@ struct iface {
 	uint8_t mac[6];
 };
 
+struct __attribute__((__packed__)) nd_opt_rdnss {
+	uint8_t nd_opt_rdnss_type;
+	uint8_t nd_opt_rdnss_len;
+	uint16_t nd_opt_rdnss_reserved;
+	uint32_t nd_opt_rdnss_lifetime;
+};
+
 static struct global {
 	struct iface iface;
 
@@ -105,6 +114,9 @@ static struct global {
 	size_t n_prefixes;
 	struct in6_addr prefixes[MAX_PREFIXES];
 	bool prefixes_onlink[MAX_PREFIXES];
+
+	size_t n_rdnss;
+	struct in6_addr rdnss[MAX_RDNSS];
 } G = {
 	.rtnl_sock = -1,
 	.icmp_sock = -1,
@@ -505,10 +517,24 @@ static void send_advert(void) {
 		};
 	}
 
-	struct iovec vec[3] = {
+	struct nd_opt_rdnss rdnss = {};
+	uint8_t rdnss_ips[G.n_rdnss][16];
+
+	if (G.n_rdnss > 0) {
+		rdnss.nd_opt_rdnss_type = 25;
+		rdnss.nd_opt_rdnss_len = 1 + 2 * G.n_rdnss;
+		rdnss.nd_opt_rdnss_lifetime = htonl(AdvRDNSSLifetime);
+
+		for (i = 0; i < G.n_rdnss; i++)
+			memcpy(rdnss_ips[i], G.rdnss[i].s6_addr, 16);
+	}
+
+	struct iovec vec[5] = {
 		{ .iov_base = &advert, .iov_len = sizeof(advert) },
 		{ .iov_base = &lladdr, .iov_len = sizeof(lladdr) },
 		{ .iov_base = prefixes, .iov_len = sizeof(prefixes) },
+		{ .iov_base = &rdnss, .iov_len = sizeof(rdnss) },
+		{ .iov_base = rdnss_ips, .iov_len = sizeof(rdnss_ips) }
 	};
 
 	struct sockaddr_in6 addr = {
@@ -531,7 +557,7 @@ static void send_advert(void) {
 		.msg_name = &addr,
 		.msg_namelen = sizeof(addr),
 		.msg_iov = vec,
-		.msg_iovlen = 3,
+		.msg_iovlen = G.n_rdnss > 0 ? 5 : 3,
 		.msg_control = cbuf,
 		.msg_controllen = 0,
 		.msg_flags = 0,
@@ -552,7 +578,21 @@ static void send_advert(void) {
 
 
 static void usage(void) {
-	fprintf(stderr, "Usage: uradvd [-h] -i <interface> -a/-p <prefix> [ -a/-p <prefix> ... ] [ --default-lifetime <seconds> ]\n");
+	fprintf(stderr, "Usage: uradvd [-h] -i <interface> -a/-p <prefix> [ -a/-p <prefix> ... ] [ --default-lifetime <seconds> ] [ --rdnss <ip> ... ]\n");
+}
+
+static void add_rdnss(const char *ip) {
+	if (G.n_rdnss == MAX_RDNSS)
+		error(1, 0, "maximum number of RDNSS IPs is %i.", MAX_RDNSS);
+
+	if (inet_pton(AF_INET6, ip, &G.rdnss[G.n_rdnss]) != 1)
+		goto error;
+
+	G.n_rdnss++;
+	return;
+
+  error:
+	error(1, 0, "invalid RDNSS IP address %s.", ip);
 }
 
 static void add_prefix(const char *prefix, bool adv_onlink) {
@@ -594,6 +634,7 @@ static void parse_cmdline(int argc, char *argv[]) {
 	static struct option long_options[] =
 	{
 		{"default-lifetime", required_argument, 0, 0},
+		{"rdnss", required_argument, 0, 1},
 		{0, 0, 0, 0}
 	};
 
@@ -609,6 +650,10 @@ static void parse_cmdline(int argc, char *argv[]) {
 
 			G.adv_default_lifetime = val;
 
+			break;
+
+		case 1: // --rdnss
+			add_rdnss(optarg);
 			break;
 
 		case 'i':
