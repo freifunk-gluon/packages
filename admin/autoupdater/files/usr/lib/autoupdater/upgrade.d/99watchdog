@@ -1,0 +1,3 @@
+#watchdog which init a reboot if sysupgrade stuck
+
+( sleep 400; reboot -f) &
