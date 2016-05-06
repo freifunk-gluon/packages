@@ -1,0 +1,8 @@
+# Create a lockfile for 3rd-party scripts which can be checked easily to ensure that
+# no reboot will be initiated while autoupdater is running
+
+lockfile='/tmp/autoupdate.lock'
+
+touch $lockfile || logger "gluon-autoupdater: lockfile could not be written"
+
+exit 0
