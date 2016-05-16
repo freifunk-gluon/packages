@@ -370,6 +370,8 @@ static void serve(int sock) {
 
 
 int main(int argc, char **argv) {
+	const int one = 1;
+
 	int sock;
 	struct sockaddr_in6 server_addr = {};
 	struct in6_addr mgroup_addr;
@@ -378,6 +380,11 @@ int main(int argc, char **argv) {
 
 	if (sock < 0) {
 		perror("creating socket");
+		exit(EXIT_FAILURE);
+	}
+
+	if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &one, sizeof(one))) {
+		perror("can't set socket to IPv6 only");
 		exit(EXIT_FAILURE);
 	}
 
