@@ -48,6 +48,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#define MULTICAST_MAX_DELAY (1*1000*1000) // 1 second
+
 
 struct provider_list {
 	struct provider_list *next;
@@ -320,19 +322,33 @@ static struct json_object * handle_request(char *request, bool *compress) {
 	}
 }
 
-
 static void serve(int sock) {
 	char input[256];
+	char control[256];
 	const char *output = NULL;
 	ssize_t input_bytes, output_bytes;
 	struct sockaddr_in6 addr;
+	struct in6_addr destaddr;
+	struct cmsghdr *cmsg;
 	socklen_t addrlen = sizeof(addr);
 	bool compress;
 
-	input_bytes = recvfrom(sock, input, sizeof(input)-1, 0, (struct sockaddr *)&addr, &addrlen);
+	struct iovec iv = {
+		.iov_base = input,
+		.iov_len = sizeof(input)-1,
+	};
+	struct msghdr mh = {
+		.msg_name = &addr,
+		.msg_namelen = sizeof(addr),
+		.msg_iov = &iv,
+		.msg_iovlen = 1,
+		.msg_control = control,
+		.msg_controllen = sizeof(control),
+	};
+	input_bytes = recvmsg(sock, &mh, 0);
 
 	if (input_bytes < 0) {
-		perror("recvfrom failed");
+		perror("recvmsg failed");
 		exit(EXIT_FAILURE);
 	}
 
@@ -341,6 +357,19 @@ static void serve(int sock) {
 	struct json_object *result = handle_request(input, &compress);
 	if (!result)
 		return;
+
+	// Determine destination address
+	for (cmsg = CMSG_FIRSTHDR(&mh);	cmsg != NULL; cmsg = CMSG_NXTHDR(&mh, cmsg))
+	{
+		// ignore the control headers that don't match what we want
+		if (cmsg->cmsg_level != IPPROTO_IPV6 || cmsg->cmsg_type != IPV6_PKTINFO)
+			continue;
+		struct in6_pktinfo *pi = CMSG_DATA(cmsg);
+		destaddr = pi->ipi6_addr;
+		break;
+	}
+	// Now "cmsg != NULL" tests whether we found the destination address at all.
+	const bool is_multicast = (cmsg != NULL) && destaddr.s6_addr[0] == 0xFF;
 
 	const char *str = json_object_to_json_string_ext(result, JSON_C_TO_STRING_PLAIN);
 
@@ -361,6 +390,10 @@ static void serve(int sock) {
 	}
 
 	if (output) {
+		if (is_multicast) {
+			// Wait some random amount of time to avoid spamming the multicast sender from all sides at once.
+			usleep(rand() % MULTICAST_MAX_DELAY);
+		}
 		if (sendto(sock, output, output_bytes, 0, (struct sockaddr *)&addr, addrlen) < 0)
 			perror("sendto failed");
 	}
@@ -376,6 +409,7 @@ int main(int argc, char **argv) {
 	struct sockaddr_in6 server_addr = {};
 	struct in6_addr mgroup_addr;
 
+	srand(time(NULL));
 	sock = socket(PF_INET6, SOCK_DGRAM, 0);
 
 	if (sock < 0) {
@@ -385,6 +419,10 @@ int main(int argc, char **argv) {
 
 	if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &one, sizeof(one))) {
 		perror("can't set socket to IPv6 only");
+		exit(EXIT_FAILURE);
+	}
+	if (setsockopt(sock, IPPROTO_IPV6, IPV6_RECVPKTINFO, &one, sizeof(one))) {
+		perror("can't set socket to deliver IPV6_PKTINFO control message");
 		exit(EXIT_FAILURE);
 	}
 
