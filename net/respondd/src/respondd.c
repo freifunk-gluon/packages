@@ -369,7 +369,7 @@ static void serve(int sock) {
 		break;
 	}
 	// Now "cmsg != NULL" tests whether we found the destination address at all.
-	const bool is_multicast = (cmsg != NULL) && destaddr.s6_addr[0] == 0xFF;
+	const bool is_multicast = (cmsg != NULL) && IN6_IS_ADDR_MULTICAST(&destaddr);
 
 	const char *str = json_object_to_json_string_ext(result, JSON_C_TO_STRING_PLAIN);
 
