@@ -33,8 +33,11 @@
 #include <alloca.h>
 #include <dirent.h>
 #include <dlfcn.h>
+#include <errno.h>
+#include <error.h>
 #include <inttypes.h>
 #include <search.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,9 +67,18 @@ struct request_type {
 	int64_t cache_timeout;
 };
 
+struct ifidx_list {
+	struct ifidx_list *next;
+	int idx;
+};
 
+
+static int sock;
 static int64_t now;
+static struct in6_addr mgroup_addr = IN6ADDR_ANY_INIT;
 static struct hsearch_data htab;
+static struct ifidx_list *ifaces = NULL;
+static char *iface_list_path = NULL;
 
 
 static struct json_object * merge_json(struct json_object *a, struct json_object *b);
@@ -75,31 +87,31 @@ static struct json_object * merge_json(struct json_object *a, struct json_object
 static void usage() {
 	puts("Usage:");
 	puts("  respondd -h");
-	puts("  respondd [-p <port>] [-g <group> -i <if0> [-i <if1> ..]] [-d <dir>]");
+	puts("  respondd [-p <port>] [-g <group> -c <iface_list_file>] [-d <data_dir>]");
 	puts("        -p <int>         port number to listen on");
 	puts("        -g <ip6>         multicast group, e.g. ff02::2:1001");
-	puts("        -i <string>      interface on which the group is joined");
+	puts("        -c <string>      file with one iface name per line, on all of which");
+	puts("                         the multicast group is joined");
 	puts("        -d <string>      data provider directory (default: current directory)");
 	puts("        -h               this help\n");
+	puts("The <iface_list_file> is reloaded on SIGHUP.\n");
 }
 
-static void join_mcast(const int sock, const struct in6_addr addr, const char *iface) {
+static void mcast_membership(int iface, bool member) {
 	struct ipv6_mreq mreq;
 
-	mreq.ipv6mr_multiaddr = addr;
-	mreq.ipv6mr_interface = if_nametoindex(iface);
+	mreq.ipv6mr_multiaddr = mgroup_addr;
+	mreq.ipv6mr_interface = iface;
 
-	if (mreq.ipv6mr_interface == 0)
-		goto error;
-
-	if (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq, sizeof(mreq)) == -1)
+	if (setsockopt(sock, IPPROTO_IPV6, member? IPV6_ADD_MEMBERSHIP : IPV6_DROP_MEMBERSHIP, &mreq, sizeof(mreq)) == -1)
 		goto error;
 
 	return;
 
  error:
-	fprintf(stderr, "Could not join multicast group on %s: ", iface);
-	perror(NULL);
+	error(0, errno, "Could not %s multicast group on interface #%d",
+		member? "join" : "leave",
+		iface);
 }
 
 
@@ -108,6 +120,75 @@ static void update_time(void) {
 	clock_gettime(CLOCK_MONOTONIC, &tp);
 
 	now = (int64_t)tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
+}
+
+
+static void read_iface_list() {
+	FILE *f;
+	struct ifidx_list *tmp_item, *iter_new, *iter_old = ifaces;
+	struct ifidx_list **prev_ptr;
+	char *line = NULL;
+	size_t size = 0;
+	int len;
+
+	if (IN6_IS_ADDR_UNSPECIFIED(&mgroup_addr) || iface_list_path == NULL)
+		return;
+
+	f = fopen(iface_list_path, "r");
+	if (f == NULL) {
+		error(0, errno, "warning: could not open iface list %s", iface_list_path);
+		return;
+	}
+	ifaces = NULL;
+	while ((len = getline(&line, &size, f)) != -1) {
+		if (line[len-1] == '\n')
+			line[len-1] = '\0';
+		tmp_item = malloc(sizeof(struct ifidx_list));
+		tmp_item->idx = if_nametoindex(line);
+		if (tmp_item->idx == 0) {
+			error(0, errno, "warning: could not find index for interface %s", line);
+			free(tmp_item);
+			continue;
+		}
+
+		// Insert into sorted list ifaces
+		prev_ptr = &ifaces;
+		for (iter_new = ifaces; iter_new != NULL; iter_new = iter_new->next) {
+			if (iter_new->idx > tmp_item->idx)
+				break;
+			prev_ptr = &iter_new->next;
+		}
+		tmp_item->next = iter_new;
+		*prev_ptr = tmp_item;
+	}
+	fclose(f);
+
+	for (iter_new = ifaces; iter_old != NULL || iter_new != NULL; ) {
+		if (iter_new == NULL || (iter_old != NULL && iter_old->idx < iter_new->idx)) {
+			// interface iter_old->idx disappeared
+			mcast_membership(iter_old->idx, false);
+			tmp_item = iter_old;
+			iter_old = iter_old->next;
+			free(tmp_item);
+		}
+		else if (iter_old == NULL || iter_old->idx > iter_new->idx) {
+			// interface iter_new->idx was added
+			mcast_membership(iter_new->idx, true);
+			iter_new = iter_new->next;
+		}
+		else if (iter_old->idx == iter_new->idx) {
+			// interface didn't change
+			iter_new = iter_new->next;
+			tmp_item = iter_old;
+			iter_old = iter_old->next;
+			free(tmp_item);
+		}
+	}
+}
+
+static void signal_handler(int signal) {
+	if (signal == SIGHUP)
+		read_iface_list();
 }
 
 
@@ -331,6 +412,9 @@ static void serve(int sock) {
 
 	input_bytes = recvfrom(sock, input, sizeof(input)-1, 0, (struct sockaddr *)&addr, &addrlen);
 
+	if (input_bytes == EINTR)
+		return;
+
 	if (input_bytes < 0) {
 		perror("recvfrom failed");
 		exit(EXIT_FAILURE);
@@ -372,9 +456,12 @@ static void serve(int sock) {
 int main(int argc, char **argv) {
 	const int one = 1;
 
-	int sock;
+	struct sigaction sa = {
+		.sa_handler = &signal_handler,
+		.sa_flags = SA_RESTART,
+	};
+
 	struct sockaddr_in6 server_addr = {};
-	struct in6_addr mgroup_addr;
 
 	sock = socket(PF_INET6, SOCK_DGRAM, 0);
 
@@ -393,30 +480,23 @@ int main(int argc, char **argv) {
 
 	opterr = 0;
 
-	int group_set = 0;
-
 	int c;
-	while ((c = getopt(argc, argv, "p:g:i:d:h")) != -1) {
+	while ((c = getopt(argc, argv, "p:g:c:d:h")) != -1) {
 		switch (c) {
 		case 'p':
 			server_addr.sin6_port = htons(atoi(optarg));
 			break;
 
 		case 'g':
-			if (!inet_pton(AF_INET6, optarg, &mgroup_addr)) {
+			if (!inet_pton(AF_INET6, optarg, &mgroup_addr) ||
+					!IN6_IS_ADDR_MULTICAST(&mgroup_addr)) {
 				perror("Invalid multicast group. This message will probably confuse you");
 				exit(EXIT_FAILURE);
 			}
-
-			group_set = 1;
 			break;
 
-		case 'i':
-			if (!group_set) {
-				fprintf(stderr, "Multicast group must be given before interface.\n");
-				exit(EXIT_FAILURE);
-			}
-			join_mcast(sock, mgroup_addr, optarg);
+		case 'c':
+			iface_list_path = optarg;
 			break;
 
 		case 'd':
@@ -436,12 +516,21 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	if ((iface_list_path == NULL) != (IN6_IS_ADDR_UNSPECIFIED(&mgroup_addr))) {
+		fprintf(stderr, "Error: only one of -g and -c given!\n");
+		usage();
+		exit(EXIT_FAILURE);
+	}
+
 	if (bind(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
 		perror("bind failed");
 		exit(EXIT_FAILURE);
 	}
 
 	load_providers();
+	read_iface_list();
+
+	sigaction(SIGHUP, &sa, NULL);
 
 	while (true)
 		serve(sock);
