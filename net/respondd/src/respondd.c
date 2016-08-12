@@ -203,7 +203,7 @@ bool queue_push_request(struct request_queue *q, char* req,
 }
 
 // the returned task is already set as processed
-struct request_task* queue_pop_request(struct request_queue *q) {
+struct request_task * queue_pop_request(struct request_queue *q) {
 	struct request_task *current_task = q->pop_task;
 
 	if (!current_task->unprocessed)
@@ -429,7 +429,7 @@ void send_response(int sock, struct json_object *result, bool compress,
 	json_object_put(result);
 }
 
-void serve_request(struct request_queue * queue, int sock) {
+void serve_request(struct request_queue *queue, int sock) {
 	struct request_task* task = queue_pop_request(queue);
 
 	if (task == NULL)
