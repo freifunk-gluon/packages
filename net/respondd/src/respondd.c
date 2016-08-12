@@ -202,24 +202,20 @@ bool queue_push_request(struct request_queue *q, char* req,
 	return true;
 }
 
-void queue_process_request(struct request_queue *q, int sock) {
+// the returned task is already set as processed
+struct request_task* queue_pop_request(struct request_queue *q) {
 	struct request_task *current_task = q->pop_task;
 
 	if (!current_task->unprocessed)
-		return;
-
-	process_request(
-		sock,
-		current_task->request,
-		(struct sockaddr_in *) &current_task->client_addr,
-		current_task->client_addrlen
-	);
+		return NULL;
 
 	current_task->unprocessed = false;
 
 	// go on to next task
 	if (q->pop_task++ > &q->task_ring[QUEUE_RING_LEN-1])
 		q->pop_task = &q->task_ring[0];
+
+	return current_task;
 }
 
 static void load_cache_time(struct request_type *r, const char *name) {
@@ -378,7 +374,7 @@ static struct json_object * handle_request(char *request, bool *compress) {
 }
 
 // the return value indicates whether there was a request
-static bool serve(struct request_queue *queue, int sock) {
+static bool accept_request(struct request_queue *queue, int sock) {
 	char input[REQUEST_MAXLEN];
 	ssize_t input_bytes;
 	struct sockaddr_in6 addr;
@@ -402,14 +398,10 @@ static bool serve(struct request_queue *queue, int sock) {
 	return true;
 }
 
-void process_request(int sock, char *input, struct sockaddr_in *addr, socklen_t addrlen) {
-	bool compress;
+void send_response(int sock, struct json_object *result, bool compress,
+                   struct sockaddr_in *addr, socklen_t addrlen) {
 	const char *output = NULL;
 	size_t output_bytes;
-
-	struct json_object *result = handle_request(input, &compress);
-	if (!result)
-		return;
 
 	const char *str = json_object_to_json_string_ext(result, JSON_C_TO_STRING_PLAIN);
 
@@ -435,6 +427,27 @@ void process_request(int sock, char *input, struct sockaddr_in *addr, socklen_t 
 	}
 
 	json_object_put(result);
+}
+
+void serve_request(struct request_queue * queue, int sock) {
+	struct request_task* task = queue_pop_request(queue);
+
+	if (task == NULL)
+		return;
+
+	bool compress;
+	struct json_object *result = handle_request(task->request, &compress);
+
+	if (!result)
+		return;
+
+	send_response(
+		sock,
+		result,
+		compress,
+		(struct sockaddr_in *) &task->client_addr,
+		task->client_addrlen
+	);
 }
 
 int main(int argc, char **argv) {
@@ -524,8 +537,8 @@ int main(int argc, char **argv) {
 	queue.push_task = &queue.task_ring[0];
 
 	while (true) {
-		while(serve(&queue, sock)) {}
-		queue_process_request(&queue, sock);
+		while(accept_request(&queue, sock)) {}
+		serve_request(&queue, sock);
 	}
 
 	return EXIT_FAILURE;
