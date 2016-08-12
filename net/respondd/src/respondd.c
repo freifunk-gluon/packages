@@ -475,7 +475,7 @@ int main(int argc, char **argv) {
 
 	if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
 	    sizeof(timeout)) < 0)
-		error("setsockopt failed\n");
+		perror("setsockopt failed\n");
 
 	server_addr.sin6_family = AF_INET6;
 	server_addr.sin6_addr = in6addr_any;
