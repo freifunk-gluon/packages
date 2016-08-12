@@ -213,6 +213,7 @@ bool schedule_push_request(struct request_schedule *q, char* req,
 	}
 
 	q->length++;
+	return true;
 }
 
 // the returned task is already set as processed
