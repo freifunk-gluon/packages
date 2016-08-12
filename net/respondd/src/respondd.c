@@ -185,8 +185,8 @@ static const struct respondd_provider_info * get_providers(const char *filename)
 }
 
 bool schedule_push_request(struct request_schedule *q, char* req,
-                        struct sockaddr *addr, socklen_t addrlen,
-                        int64_t scheduled_time) {
+                           struct sockaddr *addr, socklen_t addrlen,
+                           int64_t scheduled_time) {
 	if (q->length >= SCHEDULE_LEN)
 		// schedule is full
 		return false;
