@@ -49,7 +49,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#define QUEUE_RING_LEN 8
+#define SCHEDULE_LEN 8
 #define REQUEST_MAXLEN 256
 
 struct provider_list {
@@ -77,7 +77,7 @@ struct request_task {
 	char request[REQUEST_MAXLEN];
 };
 
-struct request_queue {
+struct request_schedule {
 	int length;
 	struct request_task *list_head;
 };
@@ -184,12 +184,11 @@ static const struct respondd_provider_info * get_providers(const char *filename)
 	return ret;
 }
 
-bool queue_push_request(struct request_queue *q, char* req,
+bool schedule_push_request(struct request_schedule *q, char* req,
                         struct sockaddr *addr, socklen_t addrlen,
                         int64_t scheduled_time) {
-	// TODO: rename QUEUE_RING_LEN
-	if (q->length >= QUEUE_RING_LEN)
-		// queue is full
+	if (q->length >= SCHEDULE_LEN)
+		// schedule is full
 		return false;
 
 	struct request_task *new_task = malloc(sizeof(struct request_task));
@@ -217,9 +216,9 @@ bool queue_push_request(struct request_queue *q, char* req,
 }
 
 // the returned task is already set as processed
-struct request_task * queue_pop_request(struct request_queue *q) {
+struct request_task * schedule_pop_request(struct request_schedule *q) {
 	if (!q->list_head)
-		// queue is empty
+		// schedule is empty
 		return NULL;
 
 	if (q->list_head->scheduled_time > now) {
@@ -388,7 +387,7 @@ static struct json_object * handle_request(char *request, bool *compress) {
 }
 
 // the return value indicates whether there was a request
-static bool accept_request(struct request_queue *queue, int sock) {
+static bool accept_request(struct request_schedule *schedule, int sock) {
 	char input[REQUEST_MAXLEN];
 	ssize_t input_bytes;
 	struct sockaddr_in6 addr;
@@ -407,8 +406,8 @@ static bool accept_request(struct request_queue *queue, int sock) {
 
 	input[input_bytes] = 0;
 
-	// TODO: only multicast requests should be queued
-	queue_push_request(queue, input, (struct sockaddr *)&addr, addrlen, now + 5000);
+	// TODO: only multicast requests should be scheduled in future
+	schedule_push_request(schedule, input, (struct sockaddr *)&addr, addrlen, now + 5000);
 	return true;
 }
 
@@ -443,8 +442,8 @@ void send_response(int sock, struct json_object *result, bool compress,
 	json_object_put(result);
 }
 
-void serve_request(struct request_queue *queue, int sock) {
-	struct request_task* task = queue_pop_request(queue);
+void serve_request(struct request_schedule *schedule, int sock) {
+	struct request_task* task = schedule_pop_request(schedule);
 
 	if (task == NULL)
 		return;
@@ -548,13 +547,13 @@ int main(int argc, char **argv) {
 
 	load_providers();
 
-	struct request_queue queue = {};
+	struct request_schedule schedule = {};
 
 	while (true) {
 		update_time();
 		// TODO: adjust timeout, remove polling
-		accept_request(&queue, sock);
-		serve_request(&queue, sock);
+		accept_request(&schedule, sock);
+		serve_request(&schedule, sock);
 	}
 
 	return EXIT_FAILURE;
