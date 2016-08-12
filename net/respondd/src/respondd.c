@@ -216,13 +216,27 @@ bool schedule_push_request(struct request_schedule *q, char* req,
 	return true;
 }
 
+int64_t schedule_idle_time(struct request_schedule *schedule) {
+	if (!schedule->list_head)
+		// nothing to do yet, wait nearly infinite time
+		return 3600000;
+
+	update_time();
+	int64_t result = schedule->list_head->scheduled_time - now;
+
+	if (result < 0)
+		return 0;
+	else
+		return result;
+}
+
 // the returned task is already set as processed
 struct request_task * schedule_pop_request(struct request_schedule *q) {
 	if (!q->list_head)
 		// schedule is empty
 		return NULL;
 
-	if (q->list_head->scheduled_time > now) {
+	if (schedule_idle_time(q) > 0) {
 		// nothing to do yet
 		return NULL;
 	}
@@ -388,11 +402,19 @@ static struct json_object * handle_request(char *request, bool *compress) {
 }
 
 // the return value indicates whether there was a request
-static bool accept_request(struct request_schedule *schedule, int sock) {
+static bool accept_request(struct request_schedule *schedule, int sock, uint64_t timeout) {
 	char input[REQUEST_MAXLEN];
 	ssize_t input_bytes;
 	struct sockaddr_in6 addr;
 	socklen_t addrlen = sizeof(addr);
+
+	// set timeout to the socket
+	struct timeval t;
+	t.tv_sec = timeout / 1000;
+	t.tv_usec = (timeout % 1000) * 1000;
+
+	if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&t, sizeof(t)) < 0)
+		perror("setsockopt failed\n");
 
 	input_bytes = recvfrom(sock, input, sizeof(input)-1, 0, (struct sockaddr *)&addr, &addrlen);
 
@@ -408,6 +430,7 @@ static bool accept_request(struct request_schedule *schedule, int sock) {
 	input[input_bytes] = 0;
 
 	// TODO: only multicast requests should be scheduled in future
+	update_time();
 	schedule_push_request(schedule, input, (struct sockaddr *)&addr, addrlen, now + 5000);
 	return true;
 }
@@ -485,14 +508,6 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	struct timeval timeout;
-	timeout.tv_sec = 0;
-	timeout.tv_usec = 10000;
-
-	if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
-	    sizeof(timeout)) < 0)
-		perror("setsockopt failed\n");
-
 	server_addr.sin6_family = AF_INET6;
 	server_addr.sin6_addr = in6addr_any;
 
@@ -551,9 +566,7 @@ int main(int argc, char **argv) {
 	struct request_schedule schedule = {};
 
 	while (true) {
-		update_time();
-		// TODO: adjust timeout, remove polling
-		accept_request(&schedule, sock);
+		accept_request(&schedule, sock, schedule_idle_time(&schedule));
 		serve_request(&schedule, sock);
 	}
 
