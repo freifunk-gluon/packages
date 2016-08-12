@@ -196,7 +196,7 @@ bool queue_push_request(struct request_queue *q, char* req,
 	q->push_task->client_addrlen = addrlen;
 	q->push_task->unprocessed = true;
 
-	if (q->push_task++ > &q->task_ring[QUEUE_RING_LEN-1])
+	if (++q->push_task > &q->task_ring[QUEUE_RING_LEN-1])
 		q->push_task = &q->task_ring[0];
 
 	return true;
@@ -212,7 +212,7 @@ struct request_task* queue_pop_request(struct request_queue *q) {
 	current_task->unprocessed = false;
 
 	// go on to next task
-	if (q->pop_task++ > &q->task_ring[QUEUE_RING_LEN-1])
+	if (++q->pop_task > &q->task_ring[QUEUE_RING_LEN-1])
 		q->pop_task = &q->task_ring[0];
 
 	return current_task;
