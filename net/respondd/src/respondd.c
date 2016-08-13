@@ -432,7 +432,7 @@ static bool accept_request(struct request_schedule *schedule, int sock,
 		.msg_controllen = sizeof(control)
 	};
 
-	input_bytes = input_bytes = recvmsg(sock, &mh, 0);
+	input_bytes = recvmsg(sock, &mh, 0);
 
 	// Timeout
 	if (input_bytes < 0 && errno == EWOULDBLOCK)
