@@ -42,10 +42,12 @@
 #include <time.h>
 #include <unistd.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #include <arpa/inet.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -98,6 +100,7 @@ static void usage() {
 	puts("        -p <int>         port number to listen on");
 	puts("        -g <ip6>         multicast group, e.g. ff02::2:1001");
 	puts("        -i <string>      interface on which the group is joined");
+	puts("        -t <int>         delay seconds before multicast responses (default: 10)");
 	puts("        -d <string>      data provider directory (default: current directory)");
 	puts("        -h               this help\n");
 }
@@ -402,7 +405,8 @@ static struct json_object * handle_request(char *request, bool *compress) {
 }
 
 // the return value indicates whether there was a request
-static bool accept_request(struct request_schedule *schedule, int sock, uint64_t timeout) {
+static bool accept_request(struct request_schedule *schedule, int sock,
+	                         uint64_t timeout, uint64_t max_multicast_delay) {
 	char input[REQUEST_MAXLEN];
 	ssize_t input_bytes;
 	struct sockaddr_in6 addr;
@@ -431,7 +435,8 @@ static bool accept_request(struct request_schedule *schedule, int sock, uint64_t
 
 	// TODO: only multicast requests should be scheduled in future
 	update_time();
-	schedule_push_request(schedule, input, (struct sockaddr *)&addr, addrlen, now + 5000);
+	int64_t delay = rand() % max_multicast_delay;
+	schedule_push_request(schedule, input, (struct sockaddr *)&addr, addrlen, now + delay);
 	return true;
 }
 
@@ -496,6 +501,21 @@ int main(int argc, char **argv) {
 	struct sockaddr_in6 server_addr = {};
 	struct in6_addr mgroup_addr;
 
+	// get radom seed
+	int frandom = open("/dev/urandom", O_RDONLY);
+	if (frandom < 0) {
+		perror("opening random");
+		exit(EXIT_FAILURE);
+	}
+
+	unsigned int seed;
+	if(read(frandom, &seed, sizeof(seed)) < 0) {
+		perror("reading random");
+		exit(EXIT_FAILURE);
+	}
+	close(frandom);
+	srand(seed);
+
 	sock = socket(PF_INET6, SOCK_DGRAM, 0);
 
 	if (sock < 0) {
@@ -514,9 +534,10 @@ int main(int argc, char **argv) {
 	opterr = 0;
 
 	int group_set = 0;
+	int max_multicast_delay = 10000;
 
 	int c;
-	while ((c = getopt(argc, argv, "p:g:i:d:h")) != -1) {
+	while ((c = getopt(argc, argv, "p:g:t:i:d:h")) != -1) {
 		switch (c) {
 		case 'p':
 			server_addr.sin6_port = htons(atoi(optarg));
@@ -537,6 +558,14 @@ int main(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			}
 			join_mcast(sock, mgroup_addr, optarg);
+			break;
+
+		case 't':
+			max_multicast_delay = 1000 * atoi(optarg);
+			if (max_multicast_delay < 0) {
+				fprintf(stderr, "Multicast delay must be positive.\n");
+				exit(EXIT_FAILURE);
+			}
 			break;
 
 		case 'd':
@@ -566,7 +595,7 @@ int main(int argc, char **argv) {
 	struct request_schedule schedule = {};
 
 	while (true) {
-		accept_request(&schedule, sock, schedule_idle_time(&schedule));
+		accept_request(&schedule, sock, schedule_idle_time(&schedule), max_multicast_delay);
 		serve_request(&schedule, sock);
 	}
 
