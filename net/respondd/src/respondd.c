@@ -402,7 +402,7 @@ static struct json_object * handle_request(char *request, bool *compress) {
 
 // the return value indicates whether there was a request
 static bool accept_request(struct request_schedule *schedule, int sock,
-	                         uint64_t timeout, uint64_t max_multicast_delay) {
+                           uint64_t timeout, uint64_t max_multicast_delay) {
 	char input[REQUEST_MAXLEN];
 	ssize_t input_bytes;
 	struct sockaddr_in6 addr;
