@@ -85,8 +85,6 @@ struct request_schedule {
 static int64_t now;
 static struct hsearch_data htab;
 
-void process_request(int sock, char *input, struct sockaddr_in *addr, socklen_t addrlen);
-
 
 static struct json_object * merge_json(struct json_object *a, struct json_object *b);
 
