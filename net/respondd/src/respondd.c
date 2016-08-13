@@ -504,7 +504,7 @@ void send_response(int sock, struct json_object *result, bool compress,
 void serve_request(struct request_schedule *schedule, int sock) {
 	struct request_task* task = schedule_pop_request(schedule);
 
-	if (task == NULL)
+	if (!task)
 		return;
 
 	bool compress;
