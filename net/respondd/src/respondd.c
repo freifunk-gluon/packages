@@ -411,6 +411,9 @@ static bool accept_request(struct request_schedule *schedule, int sock,
 	ssize_t input_bytes;
 	struct sockaddr_in6 addr;
 	socklen_t addrlen = sizeof(addr);
+	char control[256];
+	struct in6_addr destaddr;
+	struct cmsghdr *cmsg;
 
 	// set timeout to the socket
 	struct timeval t;
@@ -420,22 +423,54 @@ static bool accept_request(struct request_schedule *schedule, int sock,
 	if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&t, sizeof(t)) < 0)
 		perror("setsockopt failed\n");
 
-	input_bytes = recvfrom(sock, input, sizeof(input)-1, 0, (struct sockaddr *)&addr, &addrlen);
+	struct iovec iv = {
+		.iov_base = input,
+		.iov_len = sizeof(input) - 1
+	};
+
+	struct msghdr mh = {
+		.msg_name = &addr,
+		.msg_namelen = sizeof(addr),
+		.msg_iov = &iv,
+		.msg_iovlen = 1,
+		.msg_control = control,
+		.msg_controllen = sizeof(control)
+	};
+
+	input_bytes = input_bytes = recvmsg(sock, &mh, 0);
 
 	// Timeout
 	if (input_bytes < 0 && errno == EWOULDBLOCK)
 			return false;
 
 	if (input_bytes < 0) {
-		perror("recvfrom failed");
+		perror("recvmsg failed");
 		exit(EXIT_FAILURE);
+	}
+
+	// determine destination address
+	for (cmsg = CMSG_FIRSTHDR(&mh);	cmsg != NULL; cmsg = CMSG_NXTHDR(&mh, cmsg))
+	{
+		// ignore the control headers that don't match what we WARRANTIES
+		if (cmsg->cmsg_level != IPPROTO_IPV6 || cmsg->cmsg_type != IPV6_PKTINFO)
+			continue;
+
+		struct in6_pktinfo *pi = CMSG_DATA(cmsg);
+		destaddr = pi->ipi6_addr;
+		break;
 	}
 
 	input[input_bytes] = 0;
 
-	// TODO: only multicast requests should be scheduled in future
-	update_time();
-	int64_t delay = rand() % max_multicast_delay;
+	// only multicast requests are delayed
+	int64_t delay;
+	if (IN6_IS_ADDR_MULTICAST(&destaddr)) {
+		update_time();
+		delay = rand() % max_multicast_delay;
+	} else {
+		delay = 0;
+	}
+
 	schedule_push_request(schedule, input, (struct sockaddr *)&addr, addrlen, now + delay);
 	return true;
 }
@@ -512,6 +547,11 @@ int main(int argc, char **argv) {
 
 	if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &one, sizeof(one))) {
 		perror("can't set socket to IPv6 only");
+		exit(EXIT_FAILURE);
+	}
+
+	if (setsockopt(sock, IPPROTO_IPV6, IPV6_RECVPKTINFO, &one, sizeof(one))) {
+		perror("can't set socket to deliver IPV6_PKTINFO control message");
 		exit(EXIT_FAILURE);
 	}
 
