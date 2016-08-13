@@ -183,19 +183,10 @@ static const struct respondd_provider_info * get_providers(const char *filename)
 	return ret;
 }
 
-bool schedule_push_request(struct request_schedule *s, char* req,
-                           struct sockaddr *addr, socklen_t addrlen,
-                           int64_t scheduled_time) {
+bool schedule_push_request(struct request_schedule *s, struct request_task *new_task) {
 	if (s->length >= SCHEDULE_LEN)
 		// schedule is full
 		return false;
-
-	struct request_task *new_task = malloc(sizeof(struct request_task));
-	// store the request
-	new_task->scheduled_time = scheduled_time;
-	strcpy(new_task->request, req);
-	memcpy(&new_task->client_addr, addr, addrlen);
-	new_task->client_addrlen = addrlen;
 
 	if (!s->list_head || s->list_head->scheduled_time > new_task->scheduled_time) {
 		new_task->next = s->list_head;
@@ -458,15 +449,26 @@ static bool accept_request(struct request_schedule *schedule, int sock,
 	input[input_bytes] = 0;
 
 	// only multicast requests are delayed
+	update_time();
 	int64_t delay;
 	if (IN6_IS_ADDR_MULTICAST(&destaddr)) {
-		update_time();
 		delay = rand() % max_multicast_delay;
 	} else {
 		delay = 0;
 	}
 
-	schedule_push_request(schedule, input, (struct sockaddr *)&addr, addrlen, now + delay);
+	struct request_task *new_task = malloc(sizeof(struct request_task));
+	new_task->scheduled_time = now + delay;
+	strcpy(new_task->request, input);
+	memcpy(&new_task->client_addr, &addr, addrlen);
+	new_task->client_addrlen = addrlen;
+
+
+	if(!schedule_push_request(schedule, new_task)) {
+		free(new_task);
+		return false;
+	}
+
 	return true;
 }
 
