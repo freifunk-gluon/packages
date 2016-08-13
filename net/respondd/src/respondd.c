@@ -501,20 +501,7 @@ int main(int argc, char **argv) {
 	struct sockaddr_in6 server_addr = {};
 	struct in6_addr mgroup_addr;
 
-	// get radom seed
-	int frandom = open("/dev/urandom", O_RDONLY);
-	if (frandom < 0) {
-		perror("opening random");
-		exit(EXIT_FAILURE);
-	}
-
-	unsigned int seed;
-	if(read(frandom, &seed, sizeof(seed)) < 0) {
-		perror("reading random");
-		exit(EXIT_FAILURE);
-	}
-	close(frandom);
-	srand(seed);
+	srand(time(NULL));
 
 	sock = socket(PF_INET6, SOCK_DGRAM, 0);
 
