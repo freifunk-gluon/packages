@@ -229,7 +229,6 @@ int64_t schedule_idle_time(struct request_schedule *s) {
 		return result;
 }
 
-// the returned task is already set as processed
 struct request_task * schedule_pop_request(struct request_schedule *s) {
 	if (!s->list_head)
 		// schedule is empty
