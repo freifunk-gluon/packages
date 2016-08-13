@@ -187,10 +187,10 @@ static const struct respondd_provider_info * get_providers(const char *filename)
 	return ret;
 }
 
-bool schedule_push_request(struct request_schedule *q, char* req,
+bool schedule_push_request(struct request_schedule *s, char* req,
                            struct sockaddr *addr, socklen_t addrlen,
                            int64_t scheduled_time) {
-	if (q->length >= SCHEDULE_LEN)
+	if (s->length >= SCHEDULE_LEN)
 		// schedule is full
 		return false;
 
@@ -201,12 +201,12 @@ bool schedule_push_request(struct request_schedule *q, char* req,
 	memcpy(&new_task->client_addr, addr, addrlen);
 	new_task->client_addrlen = addrlen;
 
-	if (!q->list_head || q->list_head->scheduled_time > new_task->scheduled_time) {
-		new_task->next = q->list_head;
-		q->list_head = new_task;
+	if (!s->list_head || s->list_head->scheduled_time > new_task->scheduled_time) {
+		new_task->next = s->list_head;
+		s->list_head = new_task;
 	} else {
 		struct request_task *t;
-		for (t = q->list_head; t && t->next; t = t->next) {
+		for (t = s->list_head; t && t->next; t = t->next) {
 			if (t->next->scheduled_time > new_task->scheduled_time) {
 				break;
 			}
@@ -215,17 +215,17 @@ bool schedule_push_request(struct request_schedule *q, char* req,
 		t->next = new_task;
 	}
 
-	q->length++;
+	s->length++;
 	return true;
 }
 
-int64_t schedule_idle_time(struct request_schedule *schedule) {
-	if (!schedule->list_head)
+int64_t schedule_idle_time(struct request_schedule *s) {
+	if (!s->list_head)
 		// nothing to do yet, wait nearly infinite time
 		return 3600000;
 
 	update_time();
-	int64_t result = schedule->list_head->scheduled_time - now;
+	int64_t result = s->list_head->scheduled_time - now;
 
 	if (result < 0)
 		return 0;
@@ -234,19 +234,19 @@ int64_t schedule_idle_time(struct request_schedule *schedule) {
 }
 
 // the returned task is already set as processed
-struct request_task * schedule_pop_request(struct request_schedule *q) {
-	if (!q->list_head)
+struct request_task * schedule_pop_request(struct request_schedule *s) {
+	if (!s->list_head)
 		// schedule is empty
 		return NULL;
 
-	if (schedule_idle_time(q) > 0) {
+	if (schedule_idle_time(s) > 0) {
 		// nothing to do yet
 		return NULL;
 	}
 
-	struct request_task *result = q->list_head;
-	q->list_head = q->list_head->next;
-	q->length--;
+	struct request_task *result = s->list_head;
+	s->list_head = s->list_head->next;
+	s->length--;
 
 	return result;
 }
