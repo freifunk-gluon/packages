@@ -11,7 +11,7 @@ define Package/pretty-hostname
   SECTION:=admin
   CATEGORY:=Administration
   DEPENDS:=+uci
-  TITLE:=Manage a "pretty" hostname in addition to the actual one
+  TITLE:=Manage a pretty hostname in addition to the actual one
 endef
 
 define Build/Prepare
