@@ -1,15 +1,13 @@
 #!/bin/sh
 
-set -e
-
 case $# in
 0)
 	uci -q get 'system.@system[0].pretty_hostname' || uci get 'system.@system[0].hostname'
 	;;
 1)
-	local pretty_hostname="$1"
+	pretty_hostname="$1"
 	# Remove invalid characters and leading/trailing spaces
-	local hostname="$(echo -n "$pretty_hostname" | sed -r -e 's/[^a-zA-Z0-9-]//g' -e 's/-+/-/g' -e 's/^-//')"
+	hostname="$(echo -n "$pretty_hostname" | sed -r -e 's/[^a-zA-Z0-9-]//g' -e 's/-+/-/g' -e 's/^-//')"
 	hostname="${hostname:0:63}"
 	hostname="$(echo -n "$hostname" | sed -e 's/-$//')"
 
