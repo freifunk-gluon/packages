@@ -436,7 +436,7 @@ static void accept_request(struct request_schedule *schedule, int sock,
 
 	// Timeout
 	if (input_bytes < 0 && errno == EWOULDBLOCK)
-			return;
+		return;
 
 	if (input_bytes < 0) {
 		perror("recvmsg failed");
