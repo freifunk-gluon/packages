@@ -187,19 +187,15 @@ bool schedule_push_request(struct request_schedule *s, struct request_task *new_
 		// schedule is full
 		return false;
 
-	if (!s->list_head || s->list_head->scheduled_time > new_task->scheduled_time) {
-		new_task->next = s->list_head;
-		s->list_head = new_task;
-	} else {
-		struct request_task *t;
-		for (t = s->list_head; t && t->next; t = t->next) {
-			if (t->next->scheduled_time > new_task->scheduled_time) {
-				break;
-			}
-		}
-		new_task->next = t->next;
-		t->next = new_task;
+	// insert into sorted list
+	struct request_task **pos;
+	for (pos = &s->list_head; *pos; pos = &((*pos)->next)) {
+		if ((*pos)->scheduled_time > new_task->scheduled_time)
+			break;
 	}
+	// insert before *pos
+	new_task->next = *pos;
+	*pos = new_task;
 
 	s->length++;
 	return true;
