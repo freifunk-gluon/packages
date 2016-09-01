@@ -561,10 +561,11 @@ int main(int argc, char **argv) {
 	server_addr.sin6_family = AF_INET6;
 	server_addr.sin6_addr = in6addr_any;
 
+	char *endptr;
 	opterr = 0;
 
 	int group_set = 0;
-	int max_multicast_delay = 10000;
+	uint64_t max_multicast_delay = 10000;
 
 	int c;
 	while ((c = getopt(argc, argv, "p:g:t:i:d:h")) != -1) {
@@ -591,9 +592,9 @@ int main(int argc, char **argv) {
 			break;
 
 		case 't':
-			max_multicast_delay = 1000 * atoi(optarg);
-			if (max_multicast_delay < 0) {
-				fprintf(stderr, "Multicast delay must be positive.\n");
+			max_multicast_delay = 1000 * strtoul(optarg, &endptr, 10);
+			if (!*optarg || *endptr) {
+				fprintf(stderr, "Invalid multicast delay\n");
 				exit(EXIT_FAILURE);
 			}
 			break;
