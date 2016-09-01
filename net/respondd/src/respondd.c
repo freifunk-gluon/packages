@@ -72,8 +72,7 @@ struct request_task {
 	struct request_task *next;
 	int64_t scheduled_time;
 
-	struct sockaddr_storage client_addr;
-	socklen_t client_addrlen;
+	struct sockaddr_in6 client_addr;
 	char request[REQUEST_MAXLEN];
 };
 
@@ -470,8 +469,6 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	new_task->scheduled_time = now + delay;
 	strcpy(new_task->request, input);
 	memcpy(&new_task->client_addr, &addr, addrlen);
-	new_task->client_addrlen = addrlen;
-
 
 	if(!schedule_push_request(schedule, new_task)) {
 		free(new_task);
@@ -479,7 +476,7 @@ static void accept_request(struct request_schedule *schedule, int sock,
 }
 
 void send_response(int sock, struct json_object *result, bool compress,
-                   struct sockaddr_in *addr, socklen_t addrlen) {
+                   struct sockaddr_in6 *addr) {
 	const char *output = NULL;
 	size_t output_bytes;
 
@@ -502,7 +499,7 @@ void send_response(int sock, struct json_object *result, bool compress,
 	}
 
 	if (output) {
-		if (sendto(sock, output, output_bytes, 0, addr, addrlen) < 0)
+		if (sendto(sock, output, output_bytes, 0, addr, sizeof(struct sockaddr_in6)) < 0)
 			perror("sendto failed");
 	}
 
@@ -525,8 +522,7 @@ void serve_request(struct request_schedule *schedule, int sock) {
 		sock,
 		result,
 		compress,
-		(struct sockaddr_in *) &task->client_addr,
-		task->client_addrlen
+		&task->client_addr
 	);
 
 	free(task);
