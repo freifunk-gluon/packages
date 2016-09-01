@@ -60,7 +60,6 @@ struct provider_list {
 };
 
 struct request_type {
-	// points to the corresponding provider_list for this request in the chained list
 	struct provider_list *providers;
 
 	struct json_object *cache;
@@ -210,7 +209,7 @@ int64_t schedule_idle_time(struct request_schedule *s) {
 	int64_t result = s->list_head->scheduled_time - now;
 
 	if (result == 0)
-		return -1; // zero is be infinity
+		return -1; // zero is infinity
 	else
 		return result;
 }
@@ -387,7 +386,7 @@ static struct json_object * handle_request(char *request, bool *compress) {
 
 // Wait for an incomming request and schedule it.
 //
-// 1a. If the schedule is empty, we will wait an nearly infinite time.
+// 1a. If the schedule is empty, we wait infinite time.
 // 1b. If we have scheduled requests, we only wait for incomming requests
 //     until we reach the scheduling deadline.
 // 2a. If the incomming request was sent to a multicast destination IPv6,
@@ -444,7 +443,7 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	// determine destination address
 	for (cmsg = CMSG_FIRSTHDR(&mh);	cmsg != NULL; cmsg = CMSG_NXTHDR(&mh, cmsg))
 	{
-		// ignore the control headers that don't match what we WARRANTIES
+		// skip other packet headers
 		if (cmsg->cmsg_level != IPPROTO_IPV6 || cmsg->cmsg_type != IPV6_PKTINFO)
 			continue;
 
