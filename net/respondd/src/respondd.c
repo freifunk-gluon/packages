@@ -447,7 +447,7 @@ static void accept_request(struct request_schedule *schedule, int sock,
 		if (cmsg->cmsg_level != IPPROTO_IPV6 || cmsg->cmsg_type != IPV6_PKTINFO)
 			continue;
 
-		struct in6_pktinfo *pi = CMSG_DATA(cmsg);
+		struct in6_pktinfo *pi = (struct in6_pktinfo *) CMSG_DATA(cmsg);
 		destaddr = pi->ipi6_addr;
 		break;
 	}
