@@ -205,7 +205,7 @@ bool schedule_push_request(struct request_schedule *s, struct request_task *new_
 	return true;
 }
 
-int64_t schedule_idle_time(struct request_schedule *s) {
+uint64_t schedule_idle_time(struct request_schedule *s) {
 	if (!s->list_head)
 		// nothing to do yet, wait nearly infinite time
 		return 3600000;
