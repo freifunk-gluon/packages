@@ -390,9 +390,17 @@ static struct json_object * handle_request(char *request, bool *compress) {
 	}
 }
 
-// the return value indicates whether there was a request
+// Wait for an incomming request and schedule it.
+//
+// 1a. If the schedule is empty, we will wait an nearly infinite time.
+// 1b. If we have scheduled requests, we only wait for incomming requests
+//     until we reach the scheduling deadline.
+// 2a. If the incomming request was sent to a multicast destination IPv6,
+//     choose a random delay between 0 and max_multicast_delay milliseconds.
+// 2b. If the incomming request was sent to a unicast destination, delay
+//     is zero.
 static bool accept_request(struct request_schedule *schedule, int sock,
-                           uint64_t timeout, uint64_t max_multicast_delay) {
+                           uint64_t max_multicast_delay) {
 	char input[REQUEST_MAXLEN];
 	ssize_t input_bytes;
 	struct sockaddr_in6 addr;
@@ -402,6 +410,7 @@ static bool accept_request(struct request_schedule *schedule, int sock,
 	struct cmsghdr *cmsg;
 
 	// set timeout to the socket
+	uint64_t timeout = schedule_idle_time(schedule);
 	struct timeval t;
 	t.tv_sec = timeout / 1000;
 	t.tv_usec = (timeout % 1000) * 1000;
@@ -619,7 +628,7 @@ int main(int argc, char **argv) {
 	struct request_schedule schedule = {};
 
 	while (true) {
-		accept_request(&schedule, sock, schedule_idle_time(&schedule), max_multicast_delay);
+		accept_request(&schedule, sock, max_multicast_delay);
 		serve_request(&schedule, sock);
 	}
 
