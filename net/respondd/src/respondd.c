@@ -399,7 +399,7 @@ static struct json_object * handle_request(char *request, bool *compress) {
 //     choose a random delay between 0 and max_multicast_delay milliseconds.
 // 2b. If the incomming request was sent to a unicast destination, delay
 //     is zero.
-static bool accept_request(struct request_schedule *schedule, int sock,
+static void accept_request(struct request_schedule *schedule, int sock,
                            uint64_t max_multicast_delay) {
 	char input[REQUEST_MAXLEN];
 	ssize_t input_bytes;
@@ -436,7 +436,7 @@ static bool accept_request(struct request_schedule *schedule, int sock,
 
 	// Timeout
 	if (input_bytes < 0 && errno == EWOULDBLOCK)
-			return false;
+			return;
 
 	if (input_bytes < 0) {
 		perror("recvmsg failed");
@@ -475,10 +475,7 @@ static bool accept_request(struct request_schedule *schedule, int sock,
 
 	if(!schedule_push_request(schedule, new_task)) {
 		free(new_task);
-		return false;
 	}
-
-	return true;
 }
 
 void send_response(int sock, struct json_object *result, bool compress,
