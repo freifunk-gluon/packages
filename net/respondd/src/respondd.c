@@ -592,7 +592,7 @@ int main(int argc, char **argv) {
 
 		case 't':
 			max_multicast_delay = 1000 * strtoul(optarg, &endptr, 10);
-			if (!*optarg || *endptr) {
+			if (!*optarg || *endptr || max_multicast_delay > INT64_MAX) {
 				fprintf(stderr, "Invalid multicast delay\n");
 				exit(EXIT_FAILURE);
 			}
