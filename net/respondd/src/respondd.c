@@ -95,7 +95,7 @@ static void usage() {
 	puts("        -p <int>         port number to listen on");
 	puts("        -g <ip6>         multicast group, e.g. ff02::2:1001");
 	puts("        -i <string>      interface on which the group is joined");
-	puts("        -t <int>         delay seconds before multicast responses (default: 10)");
+	puts("        -t <int>         maximum delay seconds before multicast responses (default: 10)");
 	puts("        -d <string>      data provider directory (default: current directory)");
 	puts("        -h               this help\n");
 }
