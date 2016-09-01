@@ -205,16 +205,16 @@ bool schedule_push_request(struct request_schedule *s, struct request_task *new_
 	return true;
 }
 
-uint64_t schedule_idle_time(struct request_schedule *s) {
+int64_t schedule_idle_time(struct request_schedule *s) {
 	if (!s->list_head)
-		// nothing to do yet, wait nearly infinite time
-		return 3600000;
+		// nothing to do yet (0 = infinite time)
+		return 0;
 
 	update_time();
 	int64_t result = s->list_head->scheduled_time - now;
 
-	if (result < 0)
-		return 0;
+	if (result == 0)
+		return -1; // zero is be infinity
 	else
 		return result;
 }
@@ -224,7 +224,7 @@ struct request_task * schedule_pop_request(struct request_schedule *s) {
 		// schedule is empty
 		return NULL;
 
-	if (schedule_idle_time(s) > 0) {
+	if (schedule_idle_time(s) >= 0) {
 		// nothing to do yet
 		return NULL;
 	}
@@ -408,11 +408,14 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	struct in6_addr destaddr;
 	struct cmsghdr *cmsg;
 
+	int64_t timeout = schedule_idle_time(schedule);
+	if (timeout < 0)
+		return;
+
 	// set timeout to the socket
-	uint64_t timeout = schedule_idle_time(schedule);
 	struct timeval t;
-	t.tv_sec = timeout / 1000;
-	t.tv_usec = (timeout % 1000) * 1000;
+	t.tv_sec = ((uint64_t) timeout) / 1000;
+	t.tv_usec = (((uint64_t) timeout) % 1000) * 1000;
 
 	if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&t, sizeof(t)) < 0)
 		perror("setsockopt failed\n");
