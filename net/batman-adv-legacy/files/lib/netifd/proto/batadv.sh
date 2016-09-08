@@ -27,7 +27,7 @@ proto_batadv_teardown() {
 	local config="$1"
 	local iface="$2"
 
-	echo "none" > "/sys/class/net/$iface/batman_adv/mesh_iface" || true
+	(echo "none" > "/sys/class/net/$iface/batman_adv/mesh_iface") 2>/dev/null
 }
 
 add_protocol batadv
