@@ -129,9 +129,21 @@ local function read_manifest(mirror)
   -- Remove potential trailing slash
   mirror = mirror:gsub('/$', '')
 
+
+  local starttime = os.time()
+  local manifest_loader = io.popen(string.format("exec wget -T 120 -O- '%s/%s.manifest'", mirror, branch.name), 'r')
+
   -- Read all lines from the manifest
-  -- The upper part is saves to lines, the lower part to sigs
-  for line in io.popen(string.format("exec wget -T 120 -O- '%s/%s.manifest'", mirror, branch.name), 'r'):lines() do
+  -- The upper part is saved to lines, the lower part to sigs
+  for line in manifest_loader:lines() do
+    -- If the manifest download takes more than 5 minutes, we don't really
+    -- have a chance to download a whole image
+    if os.difftime(os.time(), starttime) > 300 then
+      io.stderr:write("Timeout while reading manifest.\n")
+      manifest_loader:close()
+      return nil
+    end
+
     if not sep then
       if line == '---' then
         sep = true
@@ -194,7 +206,8 @@ end
 
 -- Downloads the firmware image from a mirror to a given output file
 local function fetch_firmware(mirror, filename, output)
-  if autoupdater_util.exec('wget', '-T', '120', '-O', output, mirror .. '/' .. filename) ~= 0 then
+  -- Let's give the image download 30 minutes, hopefully more than enough
+  if autoupdater_util.exec(1800, 'wget', '-T', '120', '-O', output, mirror .. '/' .. filename) ~= 0 then
     io.stderr:write('Error downloading the image from ' .. mirror .. '\n')
     return false
   end

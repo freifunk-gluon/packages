@@ -7,14 +7,29 @@ module('autoupdater.util', package.seeall)
 
 
 -- Executes a command in the background, without parsing the command through a shell (in contrast to os.execute)
-function exec(...)
+function exec(timeout, ...)
   local pid, errno, error = nixio.fork()
   if pid == 0 then
     nixio.execp(...)
     os.exit(127)
   elseif pid > 0 then
-    local wpid, status, code = nixio.waitpid(pid)
-    return wpid and status == 'exited' and code
+    if timeout then
+      local starttime = os.time()
+      while true do
+        if os.difftime(os.time(), starttime) > timeout then
+          nixio.kill(pid, nixio.const.SIGTERM)
+        end
+
+        local wpid, status, code = nixio.waitpid(pid, 'nohang')
+        if wpid then
+          return wpid and status == 'exited' and code
+        end
+        nixio.nanosleep(1)
+      end
+    else
+      local wpid, status, code = nixio.waitpid(pid)
+      return wpid and status == 'exited' and code
+    end
   else
     return pid, errno, error
   end
@@ -69,7 +84,7 @@ function run_dir(dir)
 
   for _, entry in ipairs(files) do
     if is_ok(entry) then
-      exec(dir .. '/' .. entry)
+      exec(nil, dir .. '/' .. entry)
     end
   end
 end
