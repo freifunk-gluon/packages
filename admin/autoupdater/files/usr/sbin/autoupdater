@@ -309,6 +309,18 @@ local function autoupdate(mirror)
 end
 
 
+local lockfile = '/var/lock/autoupdater.lock'
+local lockfd = nixio.open(lockfile, 'w', 'rw-------')
+
+if not lockfd:lock('tlock') then
+  io.stderr:write(string.format(
+    "Unable to lock file %s. Make sure there is no other instance of the autoupdater running.\n",
+    lockfile, err
+  ))
+  os.exit(1)
+end
+
+
 local mirrors = branch.mirror
 
 while #mirrors > 0 do
