@@ -208,7 +208,7 @@ int64_t schedule_idle_time(struct request_schedule *s) {
 	update_time();
 	int64_t result = s->list_head->scheduled_time - now;
 
-	if (result == 0)
+	if (result <= 0)
 		return -1; // zero is infinity
 	else
 		return result;
