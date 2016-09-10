@@ -398,7 +398,6 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	char input[REQUEST_MAXLEN];
 	ssize_t input_bytes;
 	struct sockaddr_in6 addr;
-	socklen_t addrlen = sizeof(addr);
 	char control[256];
 	struct in6_addr destaddr;
 	struct cmsghdr *cmsg;
@@ -467,7 +466,7 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	new_task->scheduled_time = now + delay;
 	strncpy(new_task->request, input, input_bytes + 1);
 	new_task->request[input_bytes] = 0;
-	memcpy(&new_task->client_addr, &addr, addrlen);
+	new_task->client_addr = addr;
 
 	if (!schedule_push_request(schedule, new_task)) {
 		free(new_task);
