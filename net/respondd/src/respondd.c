@@ -468,7 +468,7 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	strcpy(new_task->request, input);
 	memcpy(&new_task->client_addr, &addr, addrlen);
 
-	if(!schedule_push_request(schedule, new_task)) {
+	if (!schedule_push_request(schedule, new_task)) {
 		free(new_task);
 	}
 }
