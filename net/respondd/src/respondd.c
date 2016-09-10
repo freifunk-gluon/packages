@@ -412,7 +412,7 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	t.tv_sec = ((uint64_t) timeout) / 1000;
 	t.tv_usec = (((uint64_t) timeout) % 1000) * 1000;
 
-	if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&t, sizeof(t)) < 0)
+	if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof(t)) < 0)
 		perror("setsockopt failed\n");
 
 	struct iovec iv = {
