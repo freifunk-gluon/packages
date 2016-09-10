@@ -432,7 +432,7 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	update_time();
 
 	// Timeout
-	if (input_bytes < 0 && errno == EWOULDBLOCK)
+	if (input_bytes < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
 		return;
 
 	if (input_bytes < 0) {
