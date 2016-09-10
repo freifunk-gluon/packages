@@ -391,8 +391,8 @@ static struct json_object * handle_request(char *request, bool *compress) {
 //     until we reach the scheduling deadline.
 // 2a. If the incomming request was sent to a multicast destination IPv6,
 //     choose a random delay between 0 and max_multicast_delay milliseconds.
-// 2b. If the incomming request was sent to a unicast destination, delay
-//     is zero.
+// 2c. If the incomming request was sent to a unicast destination, the response
+//     will be also sent immediately.
 static void accept_request(struct request_schedule *schedule, int sock,
                            uint64_t max_multicast_delay) {
 	char input[REQUEST_MAXLEN];
@@ -454,19 +454,18 @@ static void accept_request(struct request_schedule *schedule, int sock,
 
 	input[input_bytes] = 0;
 
-	// only multicast requests are delayed
-	int64_t delay;
-	if (IN6_IS_ADDR_MULTICAST(&destaddr)) {
-		delay = rand() % max_multicast_delay;
-	} else {
-		delay = 0;
-	}
-
 	struct request_task *new_task = malloc(sizeof(*new_task));
-	new_task->scheduled_time = now + delay;
+	new_task->scheduled_time = now + rand() % max_multicast_delay;
 	strncpy(new_task->request, input, input_bytes + 1);
 	new_task->request[input_bytes] = 0;
 	new_task->client_addr = addr;
+
+	if (!IN6_IS_ADDR_MULTICAST(&destaddr)) {
+		// unicast packets are sent directly (delay is ignored)
+		serve_request(new_task, sock);
+		free(new_task);
+		return;
+	}
 
 	if (!schedule_push_request(schedule, new_task)) {
 		free(new_task);
