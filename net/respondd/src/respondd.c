@@ -465,7 +465,8 @@ static void accept_request(struct request_schedule *schedule, int sock,
 
 	struct request_task *new_task = malloc(sizeof(struct request_task));
 	new_task->scheduled_time = now + delay;
-	strcpy(new_task->request, input);
+	strncpy(new_task->request, input, input_bytes + 1);
+	new_task->request[input_bytes] = 0;
 	memcpy(&new_task->client_addr, &addr, addrlen);
 
 	if (!schedule_push_request(schedule, new_task)) {
