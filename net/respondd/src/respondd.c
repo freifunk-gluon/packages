@@ -429,16 +429,18 @@ void serve_request(struct request_task *task, int sock) {
 	);
 }
 
-// Wait for an incoming request and schedule it.
-//
-// 1a. If the schedule is empty, we wait infinite time.
-// 1b. If we have scheduled requests, we only wait for incoming requests
-//     until we reach the scheduling deadline.
-// 2a. If the incoming request was sent to a multicast destination IPv6,
-//     choose a random delay between 0 and max_multicast_delay milliseconds.
-// 2b. If the schedule is full, send the reply immediately.
-// 2c. If the incoming request was sent to a unicast destination, the response
-//     will be also sent immediately.
+/**
+ * Wait for an incoming request and schedule it.
+ *
+ * 1a. If the schedule is empty, we wait infinite time.
+ * 1b. If we have scheduled requests, we only wait for incoming requests
+ *     until we reach the scheduling deadline.
+ * 2a. If the incoming request was sent to a multicast destination IPv6,
+ *     choose a random delay between 0 and max_multicast_delay milliseconds.
+ * 2b. If the schedule is full, send the reply immediately.
+ * 2c. If the incoming request was sent to a unicast destination, the response
+ *     will be also sent immediately.
+ */
 static void accept_request(struct request_schedule *schedule, int sock,
                            uint64_t max_multicast_delay) {
 	char input[REQUEST_MAXLEN];
