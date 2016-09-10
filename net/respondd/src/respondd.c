@@ -1,6 +1,7 @@
 /*
    Copyright (c) 2014-2015, Nils Schneider <nils@nilsschneider.net>
    Copyright (c) 2015-2016, Matthias Schiffer <mschiffer@universe-factory.net>
+   Copyright (c) 2016 Leonardo Mörlein <me@irrelefant.net>
    All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
