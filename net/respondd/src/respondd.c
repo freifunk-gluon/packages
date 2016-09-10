@@ -76,7 +76,7 @@ struct request_task {
 };
 
 struct request_schedule {
-	int length;
+	size_t length;
 	struct request_task *list_head;
 };
 
