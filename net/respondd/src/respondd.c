@@ -384,6 +384,52 @@ static struct json_object * handle_request(char *request, bool *compress) {
 	}
 }
 
+void send_response(int sock, struct json_object *result, bool compress,
+                   struct sockaddr_in6 *addr) {
+	const char *output = NULL;
+	size_t output_bytes;
+
+	const char *str = json_object_to_json_string_ext(result, JSON_C_TO_STRING_PLAIN);
+
+	if (compress) {
+		size_t str_bytes = strlen(str);
+
+		mz_ulong compressed_bytes = mz_compressBound(str_bytes);
+		unsigned char *compressed = alloca(compressed_bytes);
+
+		if (!mz_compress(compressed, &compressed_bytes, (const unsigned char *)str, str_bytes)) {
+			output = (const char*)compressed;
+			output_bytes = compressed_bytes;
+		}
+	}
+	else {
+		output = str;
+		output_bytes = strlen(str);
+	}
+
+	if (output) {
+		if (sendto(sock, output, output_bytes, 0, addr, sizeof(struct sockaddr_in6)) < 0)
+			perror("sendto failed");
+	}
+
+	json_object_put(result);
+}
+
+void serve_request(struct request_task *task, int sock) {
+	bool compress;
+	struct json_object *result = handle_request(task->request, &compress);
+
+	if (!result)
+		return;
+
+	send_response(
+		sock,
+		result,
+		compress,
+		&task->client_addr
+	);
+}
+
 // Wait for an incomming request and schedule it.
 //
 // 1a. If the schedule is empty, we wait infinite time.
@@ -473,52 +519,6 @@ static void accept_request(struct request_schedule *schedule, int sock,
 		serve_request(new_task, sock);
 		free(new_task);
 	}
-}
-
-void send_response(int sock, struct json_object *result, bool compress,
-                   struct sockaddr_in6 *addr) {
-	const char *output = NULL;
-	size_t output_bytes;
-
-	const char *str = json_object_to_json_string_ext(result, JSON_C_TO_STRING_PLAIN);
-
-	if (compress) {
-		size_t str_bytes = strlen(str);
-
-		mz_ulong compressed_bytes = mz_compressBound(str_bytes);
-		unsigned char *compressed = alloca(compressed_bytes);
-
-		if (!mz_compress(compressed, &compressed_bytes, (const unsigned char *)str, str_bytes)) {
-			output = (const char*)compressed;
-			output_bytes = compressed_bytes;
-		}
-	}
-	else {
-		output = str;
-		output_bytes = strlen(str);
-	}
-
-	if (output) {
-		if (sendto(sock, output, output_bytes, 0, addr, sizeof(struct sockaddr_in6)) < 0)
-			perror("sendto failed");
-	}
-
-	json_object_put(result);
-}
-
-void serve_request(struct request_task *task, int sock) {
-	bool compress;
-	struct json_object *result = handle_request(task->request, &compress);
-
-	if (!result)
-		return;
-
-	send_response(
-		sock,
-		result,
-		compress,
-		&task->client_addr
-	);
 }
 
 int main(int argc, char **argv) {
