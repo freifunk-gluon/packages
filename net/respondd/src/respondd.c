@@ -504,12 +504,7 @@ void send_response(int sock, struct json_object *result, bool compress,
 	json_object_put(result);
 }
 
-void serve_request(struct request_schedule *schedule, int sock) {
-	struct request_task* task = schedule_pop_request(schedule);
-
-	if (!task)
-		return;
-
+void serve_request(struct request_task *task, int sock) {
 	bool compress;
 	struct json_object *result = handle_request(task->request, &compress);
 
@@ -522,8 +517,6 @@ void serve_request(struct request_schedule *schedule, int sock) {
 		compress,
 		&task->client_addr
 	);
-
-	free(task);
 }
 
 int main(int argc, char **argv) {
@@ -621,7 +614,14 @@ int main(int argc, char **argv) {
 
 	while (true) {
 		accept_request(&schedule, sock, max_multicast_delay);
-		serve_request(&schedule, sock);
+
+		struct request_task* task = schedule_pop_request(&schedule);
+
+		if (!task)
+			continue;
+
+		serve_request(task, sock);
+		free(task);
 	}
 
 	return EXIT_FAILURE;
