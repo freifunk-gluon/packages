@@ -430,6 +430,7 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	};
 
 	input_bytes = recvmsg(sock, &mh, 0);
+	update_time();
 
 	// Timeout
 	if (input_bytes < 0 && errno == EWOULDBLOCK)
@@ -455,7 +456,6 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	input[input_bytes] = 0;
 
 	// only multicast requests are delayed
-	update_time();
 	int64_t delay;
 	if (IN6_IS_ADDR_MULTICAST(&destaddr)) {
 		delay = rand() % max_multicast_delay;
