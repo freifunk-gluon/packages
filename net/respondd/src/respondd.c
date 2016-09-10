@@ -391,6 +391,7 @@ static struct json_object * handle_request(char *request, bool *compress) {
 //     until we reach the scheduling deadline.
 // 2a. If the incomming request was sent to a multicast destination IPv6,
 //     choose a random delay between 0 and max_multicast_delay milliseconds.
+// 2b. If the schedule is full, send the reply immediately.
 // 2c. If the incomming request was sent to a unicast destination, the response
 //     will be also sent immediately.
 static void accept_request(struct request_schedule *schedule, int sock,
@@ -468,6 +469,8 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	}
 
 	if (!schedule_push_request(schedule, new_task)) {
+		// we can't schedule, so send the response immediately
+		serve_request(new_task, sock);
 		free(new_task);
 	}
 }
