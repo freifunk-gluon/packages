@@ -445,7 +445,7 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	ssize_t input_bytes;
 	struct sockaddr_in6 addr;
 	char control[256];
-	struct in6_addr destaddr;
+	struct in6_addr destaddr = {};
 	struct cmsghdr *cmsg;
 
 	int64_t timeout = schedule_idle_time(schedule);
