@@ -617,7 +617,7 @@ int main(int argc, char **argv) {
 	while (true) {
 		accept_request(&schedule, sock, max_multicast_delay);
 
-		struct request_task* task = schedule_pop_request(&schedule);
+		struct request_task *task = schedule_pop_request(&schedule);
 
 		if (!task)
 			continue;
