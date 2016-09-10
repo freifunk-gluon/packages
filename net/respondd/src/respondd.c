@@ -506,15 +506,16 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	new_task->request[input_bytes] = 0;
 	new_task->client_addr = addr;
 
-	if (!IN6_IS_ADDR_MULTICAST(&destaddr)) {
-		// unicast packets are sent directly (delay is ignored)
-		serve_request(new_task, sock);
-		free(new_task);
-		return;
-	}
+	bool is_scheduled;
+	if(IN6_IS_ADDR_MULTICAST(&destaddr))
+		// scheduling could fail because the schedule is full
+		is_scheduled = schedule_push_request(schedule, new_task);
+	else
+		// unicast packets are always sent directly
+		is_scheduled = false;
 
-	if (!schedule_push_request(schedule, new_task)) {
-		// we can't schedule, so send the response immediately
+	if (!is_scheduled) {
+		// reply immediately
 		serve_request(new_task, sock);
 		free(new_task);
 	}
