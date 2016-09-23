@@ -27,7 +27,6 @@
 #define _GNU_SOURCE
 
 #include <errno.h>
-#include <error.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -61,12 +60,24 @@ static bool nlexpect;
 static int nlerror;
 
 
-static inline void exit_errno(const char *message) {
-	error(1, errno, "error: %s", message);
+static inline void print_error(const char *prefix, const char *message, int err) {
+	if (err)
+		fprintf(stderr, "uradvd: %s: %s: %s\n", prefix, message, strerror(err));
+	else
+		fprintf(stderr, "uradvd: %s: %s\n", prefix, message);
 }
 
-static inline void warn_errno(const char *message) {
-	error(0, errno, "warning: %s", message);
+__attribute__((noreturn)) static inline void exit_error(const char *message, int err) {
+	print_error("error", message, err);
+	exit(1);
+}
+
+__attribute__((noreturn)) static inline void exit_errno(const char *message) {
+	exit_error(message, errno);
+}
+
+static inline void warn_error(const char *message, int err) {
+	print_error("error", message, err);
 }
 
 
@@ -124,7 +135,7 @@ static bool do_send(struct nl_msg *msg, bool expect) {
 	nl_wait_for_ack(sock);
 
 	if (nlerror) {
-		error(0, nlerror, "netlink");
+		warn_error("netlink", nlerror);
 		errno = nlerror;
 		return false;
 	}
@@ -233,7 +244,7 @@ static inline void usage(void) {
 }
 
 static inline void maxrate(void) {
-	error(1, 0, "error: maximum allowed rate it about 2^25 Kbit/s");
+	exit_error("error: maximum allowed rate it about 2^25 Kbit/s\n", 0);
 }
 
 
@@ -245,8 +256,10 @@ int main(int argc, char *argv[]) {
 	char *end;
 
 	ifindex = if_nametoindex(argv[1]);
-	if (!ifindex)
-		error(1, 0, "invalid interface: %s", argv[1]);
+	if (!ifindex) {
+		fprintf(stderr, "invalid interface: %s\n", argv[1]);
+		exit(1);
+	}
 
 	if (strcmp(argv[2], "-") != 0) {
 		ingress = strtod(argv[2], &end);
