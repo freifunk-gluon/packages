@@ -11,7 +11,7 @@ define Package/uradvd
   SECTION:=net
   CATEGORY:=Network
   TITLE:=A tiny radvd
-  DEPENDS:=+libc +kmod-ipv6 +librt
+  DEPENDS:=@IPV6 +librt
 endef
 
 define Build/Prepare
