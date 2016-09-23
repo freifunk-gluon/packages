@@ -27,7 +27,6 @@
 #define _GNU_SOURCE
 
 #include <errno.h>
-#include <error.h>
 #include <ifaddrs.h>
 #include <fcntl.h>
 #include <getopt.h>
@@ -124,12 +123,28 @@ static struct global {
 };
 
 
+static inline void print_error(const char *prefix, const char *message, int err) {
+	if (err)
+		fprintf(stderr, "uradvd: %s: %s: %s\n", prefix, message, strerror(err));
+	else
+		fprintf(stderr, "uradvd: %s: %s\n", prefix, message);
+}
+
+static inline void exit_error(const char *message, int err) {
+	print_error("error", message, err);
+	exit(1);
+}
+
 static inline void exit_errno(const char *message) {
-	error(1, errno, "error: %s", message);
+	exit_error(message, errno);
+}
+
+static inline void warn_error(const char *message, int err) {
+	print_error("error", message, err);
 }
 
 static inline void warn_errno(const char *message) {
-	error(0, errno, "warning: %s", message);
+	warn_error(message, errno);
 }
 
 
@@ -388,7 +403,7 @@ static void handle_rtnl(void) {
 			return;
 
 		case NLMSG_ERROR:
-			error(1, 0, "error: netlink error");
+			exit_error("netlink error", 0);
 
 		default:
 			if (handle_rtnl_msg(nh->nlmsg_type, NLMSG_DATA(nh))) {
@@ -582,22 +597,24 @@ static void usage(void) {
 }
 
 static void add_rdnss(const char *ip) {
-	if (G.n_rdnss == MAX_RDNSS)
-		error(1, 0, "maximum number of RDNSS IPs is %i.", MAX_RDNSS);
+	if (G.n_rdnss == MAX_RDNSS) {
+		fprintf(stderr, "uradvd: error: maximum number of RDNSS IPs is %i.\n", MAX_RDNSS);
+		exit(1);
+	}
 
-	if (inet_pton(AF_INET6, ip, &G.rdnss[G.n_rdnss]) != 1)
-		goto error;
+	if (inet_pton(AF_INET6, ip, &G.rdnss[G.n_rdnss]) != 1) {
+		fprintf(stderr, "uradvd: error: invalid RDNSS IP address %s.\n", ip);
+		exit(1);
+	}
 
 	G.n_rdnss++;
-	return;
-
-  error:
-	error(1, 0, "invalid RDNSS IP address %s.", ip);
 }
 
 static void add_prefix(const char *prefix, bool adv_onlink) {
-	if (G.n_prefixes == MAX_PREFIXES)
-		error(1, 0, "maximum number of prefixes is %i.", MAX_PREFIXES);
+	if (G.n_prefixes == MAX_PREFIXES) {
+		fprintf(stderr, "uradvd: error: maximum number of prefixes is %i.\n", MAX_PREFIXES);
+		exit(1);
+	}
 
 	const size_t len = strlen(prefix)+1;
 	char prefix2[len];
@@ -622,8 +639,9 @@ static void add_prefix(const char *prefix, bool adv_onlink) {
 	G.n_prefixes++;
 	return;
 
-  error:
-	error(1, 0, "invalid prefix %s (only prefixes of length 64 are supported).", prefix);
+error:
+	fprintf(stderr, "uradvd: error: invalid prefix %s (only prefixes of length 64 are supported).\n", prefix);
+	exit(1);
 }
 
 static void parse_cmdline(int argc, char *argv[]) {
@@ -646,7 +664,7 @@ static void parse_cmdline(int argc, char *argv[]) {
 			val = strtoul(optarg, &endptr, 0);
 
 			if (!*optarg || *endptr || val > UINT16_MAX)
-				error(1, 0, "%s", "Invalid default lifetime");
+				exit_error("invalid default lifetime\n", 0);
 
 			G.adv_default_lifetime = val;
 
@@ -658,7 +676,7 @@ static void parse_cmdline(int argc, char *argv[]) {
 
 		case 'i':
 			if (G.ifname)
-				error(1, 0, "multiple interfaces are not supported.");
+				exit_error("multiple interfaces are not supported.\n", 0);
 
 			G.ifname = optarg;
 
@@ -687,7 +705,7 @@ int main(int argc, char *argv[]) {
 	parse_cmdline(argc, argv);
 
 	if (!G.ifname || !G.n_prefixes)
-		error(1, 0, "interface and prefix arguments are required.");
+		exit_error("interface and prefix arguments are required.\n", 0);
 
 	init_random();
 	init_icmp();
