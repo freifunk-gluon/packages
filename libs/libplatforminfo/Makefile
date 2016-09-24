@@ -7,6 +7,8 @@ CMAKE_INSTALL:=1
 
 PKG_LICENSE:=BSD-2-Clause
 
+PKG_FLAGS:=nonshared
+
 PKG_BUILD_DIR := $(KERNEL_BUILD_DIR)/$(PKG_NAME)
 
 include $(INCLUDE_DIR)/package.mk
