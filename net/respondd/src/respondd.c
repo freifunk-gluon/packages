@@ -52,6 +52,14 @@
 
 #define SCHEDULE_LEN 8
 #define REQUEST_MAXLEN 256
+#define MAX_MULTICAST_DELAY_DEFAULT 10000
+
+struct interface_delay_info {
+	struct interface_delay_info *next;
+
+	unsigned int ifindex;
+	uint64_t max_multicast_delay;
+};
 
 struct provider_list {
 	struct provider_list *next;
@@ -95,7 +103,8 @@ static void usage() {
 	puts("        -p <int>         port number to listen on");
 	puts("        -g <ip6>         multicast group, e.g. ff02::2:1001");
 	puts("        -i <string>      interface on which the group is joined");
-	puts("        -t <int>         maximum delay seconds before multicast responses (default: 10)");
+	puts("        -t <int>         maximum delay seconds before multicast responses");
+	puts("                         for the last specified mulicast interface (default: 10)");
 	puts("        -d <string>      data provider directory (default: current directory)");
 	puts("        -h               this help\n");
 }
@@ -443,13 +452,14 @@ void serve_request(struct request_task *task, int sock) {
  *     will be also sent immediately.
  */
 static void accept_request(struct request_schedule *schedule, int sock,
-                           uint64_t max_multicast_delay) {
+                           struct interface_delay_info *if_delay_info_list) {
 	char input[REQUEST_MAXLEN];
 	ssize_t input_bytes;
 	struct sockaddr_in6 addr;
 	char control[256];
 	struct in6_addr destaddr = {};
 	struct cmsghdr *cmsg;
+	unsigned int ifindex;
 
 	int64_t timeout = schedule_idle_time(schedule);
 	if (timeout < 0)
@@ -498,19 +508,29 @@ static void accept_request(struct request_schedule *schedule, int sock,
 
 		struct in6_pktinfo *pi = (struct in6_pktinfo *) CMSG_DATA(cmsg);
 		destaddr = pi->ipi6_addr;
+		ifindex = pi->ipi6_ifindex;
 		break;
 	}
 
 	input[input_bytes] = 0;
 
+	// get the max delay
+	uint64_t max_multicast_delay = MAX_MULTICAST_DELAY_DEFAULT;
+	struct interface_delay_info *tmp = if_delay_info_list;
+	for (; tmp; tmp = tmp->next) {
+		if (tmp->ifindex == ifindex)
+			max_multicast_delay = tmp->max_multicast_delay;
+	}
+
 	struct request_task *new_task = malloc(sizeof(*new_task));
-	new_task->scheduled_time = now + rand() % max_multicast_delay;
+	// the ternary operator avoids division by 0
+	new_task->scheduled_time = max_multicast_delay ? now + rand() % max_multicast_delay : 0;
 	strncpy(new_task->request, input, input_bytes + 1);
 	new_task->request[input_bytes] = 0;
 	new_task->client_addr = addr;
 
 	bool is_scheduled;
-	if(IN6_IS_ADDR_MULTICAST(&destaddr))
+	if(new_task->scheduled_time && IN6_IS_ADDR_MULTICAST(&destaddr))
 		// scheduling could fail because the schedule is full
 		is_scheduled = schedule_push_request(schedule, new_task);
 	else
@@ -557,7 +577,9 @@ int main(int argc, char **argv) {
 	opterr = 0;
 
 	int group_set = 0;
-	uint64_t max_multicast_delay = 10000;
+	bool iface_set = false;
+	unsigned int last_ifindex = 0;
+	struct interface_delay_info *if_delay_info_list = NULL;
 
 	int c;
 	while ((c = getopt(argc, argv, "p:g:t:i:d:h")) != -1) {
@@ -580,15 +602,31 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "Multicast group must be given before interface.\n");
 				exit(EXIT_FAILURE);
 			}
+			iface_set = true;
+			last_ifindex = if_nametoindex(optarg);
 			join_mcast(sock, mgroup_addr, optarg);
 			break;
 
 		case 't':
-			max_multicast_delay = 1000 * strtoul(optarg, &endptr, 10);
+			if (!iface_set) {
+				fprintf(stderr, "Interface must be given before max response delay.\n");
+				exit(EXIT_FAILURE);
+			}
+
+			uint64_t max_multicast_delay = 1000 * strtoul(optarg, &endptr, 10);
 			if (!*optarg || *endptr || max_multicast_delay > INT64_MAX) {
 				fprintf(stderr, "Invalid multicast delay\n");
 				exit(EXIT_FAILURE);
 			}
+
+			struct interface_delay_info **pos = &if_delay_info_list;
+			// walk to the end of the list
+			for(; *pos; pos = &((*pos)->next)) {}
+			*pos = malloc(sizeof(*if_delay_info_list));
+			(*pos)->ifindex = last_ifindex;
+			(*pos)->max_multicast_delay = max_multicast_delay;
+			(*pos)->next = NULL;
+
 			break;
 
 		case 'd':
@@ -618,7 +656,7 @@ int main(int argc, char **argv) {
 	struct request_schedule schedule = {};
 
 	while (true) {
-		accept_request(&schedule, sock, max_multicast_delay);
+		accept_request(&schedule, sock, if_delay_info_list);
 
 		struct request_task *task = schedule_pop_request(&schedule);
 
