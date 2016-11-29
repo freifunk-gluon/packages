@@ -95,6 +95,8 @@ const char * platforminfo_get_model(void) {
 const char * platforminfo_get_image_name(void) {
 #if defined(TARGET_x86_generic)
         return "x86-generic";
+#elif defined(TARGET_x86_geode)
+        return "x86-geode";
 #elif defined(TARGET_x86_kvm_guest)
         return "x86-kvm";
 #elif defined(TARGET_x86_xen_domu)
