@@ -615,7 +615,7 @@ int main(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			}
 
-			uint64_t max_multicast_delay = 1000 * strtoul(optarg, &endptr, 10);
+			uint64_t max_multicast_delay = UINT64_C(1000) * strtoul(optarg, &endptr, 10);
 			if (!*optarg || *endptr || max_multicast_delay > INT64_MAX) {
 				fprintf(stderr, "Invalid multicast delay\n");
 				exit(EXIT_FAILURE);
