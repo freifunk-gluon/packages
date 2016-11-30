@@ -52,7 +52,7 @@
 
 #define SCHEDULE_LEN 8
 #define REQUEST_MAXLEN 256
-#define MAX_MULTICAST_DELAY_DEFAULT 10000
+#define MAX_MULTICAST_DELAY_DEFAULT 0
 
 struct interface_delay_info {
 	struct interface_delay_info *next;
@@ -104,7 +104,7 @@ static void usage() {
 	puts("        -g <ip6>         multicast group, e.g. ff02::2:1001");
 	puts("        -i <string>      interface on which the group is joined");
 	puts("        -t <int>         maximum delay seconds before multicast responses");
-	puts("                         for the last specified mulicast interface (default: 10)");
+	puts("                         for the last specified multicast interface (default: 0)");
 	puts("        -d <string>      data provider directory (default: current directory)");
 	puts("        -h               this help\n");
 }
