@@ -518,8 +518,10 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	uint64_t max_multicast_delay = MAX_MULTICAST_DELAY_DEFAULT;
 	struct interface_delay_info *tmp = if_delay_info_list;
 	for (; tmp; tmp = tmp->next) {
-		if (tmp->ifindex == ifindex)
+		if (tmp->ifindex == ifindex) {
 			max_multicast_delay = tmp->max_multicast_delay;
+			break;
+		}
 	}
 
 	struct request_task *new_task = malloc(sizeof(*new_task));
