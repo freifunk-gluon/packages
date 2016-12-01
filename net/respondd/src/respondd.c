@@ -460,6 +460,7 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	struct in6_addr destaddr = {};
 	struct cmsghdr *cmsg;
 	unsigned int ifindex;
+	error_t recv_errno;
 
 	int64_t timeout = schedule_idle_time(schedule);
 	if (timeout < 0)
@@ -488,9 +489,11 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	};
 
 	input_bytes = recvmsg(sock, &mh, 0);
+	recv_errno = errno;
 	update_time();
 
 	// Timeout
+	errno = recv_errno;
 	if (input_bytes < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
 		return;
 
