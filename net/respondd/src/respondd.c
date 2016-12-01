@@ -460,7 +460,7 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	char control[256];
 	struct in6_addr destaddr = {};
 	struct cmsghdr *cmsg;
-	unsigned int ifindex;
+	unsigned int ifindex = 0;
 	int recv_errno;
 
 	int64_t timeout = schedule_idle_time(schedule);
