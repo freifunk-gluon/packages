@@ -418,7 +418,7 @@ void send_response(int sock, struct json_object *result, bool compress,
 	}
 
 	if (output) {
-		if (sendto(sock, output, output_bytes, 0, addr, sizeof(struct sockaddr_in6)) < 0)
+		if (sendto(sock, output, output_bytes, 0, (struct sockaddr *) addr, sizeof(*addr)) < 0)
 			perror("sendto failed");
 	}
 
