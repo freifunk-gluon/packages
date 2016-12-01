@@ -109,11 +109,12 @@ static void usage() {
 	puts("        -h               this help\n");
 }
 
-static void join_mcast(const int sock, const struct in6_addr addr, const char *iface) {
+// returns true on success
+static bool join_mcast(const int sock, const struct in6_addr addr, unsigned int ifindex) {
 	struct ipv6_mreq mreq;
 
 	mreq.ipv6mr_multiaddr = addr;
-	mreq.ipv6mr_interface = if_nametoindex(iface);
+	mreq.ipv6mr_interface = ifindex;
 
 	if (mreq.ipv6mr_interface == 0)
 		goto error;
@@ -121,11 +122,11 @@ static void join_mcast(const int sock, const struct in6_addr addr, const char *i
 	if (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq, sizeof(mreq)) == -1)
 		goto error;
 
-	return;
+	return true;
 
  error:
-	fprintf(stderr, "Could not join multicast group on %s: ", iface);
 	perror(NULL);
+	return false;
 }
 
 
@@ -609,7 +610,10 @@ int main(int argc, char **argv) {
 			}
 			iface_set = true;
 			last_ifindex = if_nametoindex(optarg);
-			join_mcast(sock, mgroup_addr, optarg);
+			if(!join_mcast(sock, mgroup_addr, last_ifindex)) {
+				fprintf(stderr, "Could not join multicast group on %s: ", optarg);
+				last_ifindex = 0;
+			}
 			break;
 
 		case 't':
