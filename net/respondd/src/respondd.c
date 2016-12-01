@@ -621,13 +621,14 @@ int main(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			}
 
-			struct interface_delay_info **pos = &if_delay_info_list;
-			// walk to the end of the list
-			for(; *pos; pos = &((*pos)->next)) {}
-			*pos = malloc(sizeof(*if_delay_info_list));
-			(*pos)->ifindex = last_ifindex;
-			(*pos)->max_multicast_delay = max_multicast_delay;
-			(*pos)->next = NULL;
+			// insert the interface delay info at the beginning of the list
+			struct interface_delay_info **head = &if_delay_info_list;
+			struct interface_delay_info *old_head = if_delay_info_list;
+
+			*head = malloc(sizeof(*if_delay_info_list));
+			(*head)->ifindex = last_ifindex;
+			(*head)->max_multicast_delay = max_multicast_delay;
+			(*head)->next = old_head;
 
 			break;
 
