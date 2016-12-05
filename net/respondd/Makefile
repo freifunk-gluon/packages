@@ -25,6 +25,7 @@ define Build/Prepare
 endef
 
 define Package/respondd/install
+	$(CP) ./files/* $(1)/
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/respondd $(1)/usr/bin/
 endef

@@ -1,0 +1,5 @@
+config respondd
+	option port '1001'
+	option mcast_group 'ff02::2:1001'
+	option iface_list_file '/etc/respondd.ifaces'
+	option data_dir '/lib/respondd'
