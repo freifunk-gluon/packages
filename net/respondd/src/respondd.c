@@ -34,6 +34,7 @@
 #include <alloca.h>
 #include <dirent.h>
 #include <dlfcn.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <search.h>
 #include <stdbool.h>
@@ -49,6 +50,7 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 
 #define SCHEDULE_LEN 8
 #define REQUEST_MAXLEN 256
@@ -99,13 +101,13 @@ static struct json_object * merge_json(struct json_object *a, struct json_object
 static void usage() {
 	puts("Usage:");
 	puts("  respondd -h");
-	puts("  respondd [-p <port>] [-g <group> -i <if0> [-i <if1> ..]] [-d <dir>]");
+	puts("  respondd [-p <port>] [-g <group> -i <if0> [-i <if1> ..]] [-d <dir> [-d <dir> ..]]");
 	puts("        -p <int>         port number to listen on");
 	puts("        -g <ip6>         multicast group, e.g. ff02::2:1001");
 	puts("        -i <string>      interface on which the group is joined");
 	puts("        -t <int>         maximum delay seconds before multicast responses");
 	puts("                         for the last specified multicast interface (default: 0)");
-	puts("        -d <string>      data provider directory (default: current directory)");
+	puts("        -d <string>      data provider directory");
 	puts("        -h               this help\n");
 }
 
@@ -242,10 +244,6 @@ struct request_task * schedule_pop_request(struct request_schedule *s) {
 }
 
 static void load_cache_time(struct request_type *r, const char *name) {
-	r->cache = NULL;
-	r->cache_time = 0;
-	r->cache_timeout = now;
-
 	char filename[strlen(name) + 7];
 	snprintf(filename, sizeof(filename), "%s.cache", name);
 
@@ -265,9 +263,8 @@ static void add_provider(const char *name, const struct respondd_provider_info *
 	};
 	ENTRY *entry;
 	if (!hsearch_r(key, FIND, &entry, &htab)) {
-		struct request_type *r = malloc(sizeof(*r));
-		r->providers = NULL;
-		load_cache_time(r, provider->request);
+		struct request_type *r = calloc(1, sizeof(*r));
+		r->cache_timeout = now;
 
 		key.data = r;
 		if (!hsearch_r(key, ENTER, &entry, &htab)) {
@@ -277,6 +274,7 @@ static void add_provider(const char *name, const struct respondd_provider_info *
 	}
 
 	struct request_type *r = entry->data;
+	load_cache_time(r, provider->request);
 
 	struct provider_list *pentry = malloc(sizeof(*pentry));
 	pentry->name = strdup(name);
@@ -292,19 +290,20 @@ static void add_provider(const char *name, const struct respondd_provider_info *
 	*pos = pentry;
 }
 
-static void load_providers(void) {
+static void load_providers(const char *path) {
 	update_time();
 
-	/* Maximum number of request types, might be made configurable in the future */
-	if (!hcreate_r(32, &htab)) {
-		perror("hcreate_r");
-		exit(EXIT_FAILURE);
+	int cwdfd = open(".", O_DIRECTORY);
+
+	if (chdir(path)) {
+		perror("chdir");
+		goto out;
 	}
 
 	DIR *dir = opendir(".");
 	if (!dir) {
 		perror("opendir");
-		exit(EXIT_FAILURE);
+		goto out;
 	}
 
 	struct dirent *ent;
@@ -329,6 +328,10 @@ static void load_providers(void) {
 	}
 
 	closedir(dir);
+
+out:
+	fchdir(cwdfd);
+	close(cwdfd);
 }
 
 static struct json_object * eval_providers(struct provider_list *providers) {
@@ -565,6 +568,12 @@ int main(int argc, char **argv) {
 
 	srand(time(NULL));
 
+	/* Maximum number of request types, might be made configurable in the future */
+	if (!hcreate_r(32, &htab)) {
+		perror("hcreate_r");
+		exit(EXIT_FAILURE);
+	}
+
 	sock = socket(PF_INET6, SOCK_DGRAM, 0);
 
 	if (sock < 0) {
@@ -649,10 +658,7 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'd':
-			if (chdir(optarg)) {
-				perror("Unable to change to given directory");
-				exit(EXIT_FAILURE);
-			}
+			load_providers(optarg);
 			break;
 
 		case 'h':
@@ -669,8 +675,6 @@ int main(int argc, char **argv) {
 		perror("bind failed");
 		exit(EXIT_FAILURE);
 	}
-
-	load_providers();
 
 	struct request_schedule schedule = {};
 
