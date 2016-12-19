@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 struct airtime_result {
@@ -11,4 +12,4 @@ struct airtime_result {
 	uint8_t  noise;
 };
 
-int get_airtime(struct airtime_result *result, int ifx);
+__attribute__((visibility("hidden"))) bool get_airtime(struct airtime_result *result, int ifx);

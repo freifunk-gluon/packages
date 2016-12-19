@@ -6,4 +6,4 @@ struct iface_list {
 	struct iface_list *next;
 };
 
-struct iface_list *get_ifaces();
+__attribute__((visibility("hidden"))) struct iface_list *get_ifaces();

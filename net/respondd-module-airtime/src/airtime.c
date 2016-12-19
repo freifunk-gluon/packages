@@ -78,13 +78,13 @@ static int survey_airtime_handler(struct nl_msg *msg, void *arg) {
 		goto abort;
 	}
 
-	if(nla_parse_nested(sinfo, NL80211_SURVEY_INFO_MAX, tb[NL80211_ATTR_SURVEY_INFO], survey_policy)) {
+	if (nla_parse_nested(sinfo, NL80211_SURVEY_INFO_MAX, tb[NL80211_ATTR_SURVEY_INFO], survey_policy)) {
 		fprintf(stderr, "failed to parse nested attributes!\n");
 		goto abort;
 	}
 
 	// Channel active?
-	if(!sinfo[NL80211_SURVEY_INFO_IN_USE]){
+	if (!sinfo[NL80211_SURVEY_INFO_IN_USE]){
 		goto abort;
 	}
 
@@ -99,13 +99,14 @@ abort:
 	return NL_SKIP;
 }
 
-int get_airtime(struct airtime_result *result, int ifx) {
-	int error = 0;
+bool get_airtime(struct airtime_result *result, int ifx) {
+	bool ok = true;
 	int ctrl;
 	struct nl_sock *sk = NULL;
 	struct nl_msg *msg = NULL;
 
-#define CHECK(x) { if (!(x)) { fprintf(stderr, "airtime.c: error on line %d\n",  __LINE__); error = 1; goto out; } }
+
+#define CHECK(x) { if (!(x)) { fprintf(stderr, "%s: error on line %d\n", __FILE__, __LINE__); ok = false; goto out; } }
 
 	CHECK(sk = nl_socket_alloc());
 	CHECK(genl_connect(sk) >= 0);
@@ -113,9 +114,7 @@ int get_airtime(struct airtime_result *result, int ifx) {
 	CHECK(ctrl = genl_ctrl_resolve(sk, NL80211_GENL_NAME));
 	CHECK(nl_socket_modify_cb(sk, NL_CB_VALID, NL_CB_CUSTOM, survey_airtime_handler, result) == 0);
 	CHECK(msg = nlmsg_alloc());
-
-	/* TODO: check return? */
-	genlmsg_put(msg, 0, 0, ctrl, 0, NLM_F_DUMP, NL80211_CMD_GET_SURVEY, 0);
+	CHECK(genlmsg_put(msg, 0, 0, ctrl, 0, NLM_F_DUMP, NL80211_CMD_GET_SURVEY, 0));
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifx);
 
@@ -132,5 +131,5 @@ out:
 	if (sk)
 		nl_socket_free(sk);
 
-	return error;
+	return ok;
 }

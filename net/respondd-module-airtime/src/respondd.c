@@ -6,8 +6,8 @@
 #include "airtime.h"
 #include "ifaces.h"
 
-void fill_airtime_json(struct airtime_result *air, struct json_object *wireless) {
-	struct json_object *obj = NULL;
+static void fill_airtime_json(struct airtime_result *air, struct json_object *wireless) {
+	struct json_object *obj;
 
 	obj = json_object_new_object();
 	if(!obj)
@@ -24,10 +24,9 @@ void fill_airtime_json(struct airtime_result *air, struct json_object *wireless)
 }
 
 static struct json_object *respondd_provider_statistics(void) {
-	struct airtime_result airtime = {};
+	struct airtime_result airtime = {0};
 	struct json_object *result, *wireless;
 	struct iface_list *ifaces;
-	void *freeptr;
 
 	result = json_object_new_object();
 	if (!result)
@@ -41,9 +40,10 @@ static struct json_object *respondd_provider_statistics(void) {
 
 	ifaces = get_ifaces();
 	while (ifaces != NULL) {
-		get_airtime(&airtime, ifaces->ifx);
-		fill_airtime_json(&airtime, wireless);
-		freeptr = ifaces;
+		if(get_airtime(&airtime, ifaces->ifx))
+			fill_airtime_json(&airtime, wireless);
+
+		void *freeptr = ifaces;
 		ifaces = ifaces->next;
 		free(freeptr);
 	}
