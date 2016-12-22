@@ -41,6 +41,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
 #include <time.h>
 #include <unistd.h>
 #include <errno.h>
@@ -118,17 +119,17 @@ static bool join_mcast(const int sock, const struct in6_addr addr, unsigned int 
 	mreq.ipv6mr_multiaddr = addr;
 	mreq.ipv6mr_interface = ifindex;
 
-	if (mreq.ipv6mr_interface == 0)
-		goto error;
+	if (mreq.ipv6mr_interface == 0) {
+		fprintf(stderr, "join_mcast: no valid interface given\n");
+		return false;
+	}
 
-	if (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq, sizeof(mreq)) == -1)
-		goto error;
+	if (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq, sizeof(mreq)) == -1) {
+		perror("setsockopt: unable to join multicast group");
+		return false;
+	}
 
 	return true;
-
- error:
-	perror(NULL);
-	return false;
 }
 
 
@@ -296,7 +297,7 @@ static void load_providers(const char *path) {
 	int cwdfd = open(".", O_DIRECTORY);
 
 	if (chdir(path)) {
-		perror("chdir");
+		syslog(LOG_INFO, "unable to read providers from '%s', ignoring", path);
 		goto out;
 	}
 
@@ -482,7 +483,7 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	t.tv_usec = (((uint64_t) timeout) % 1000) * 1000;
 
 	if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof(t)) < 0)
-		perror("setsockopt failed\n");
+		perror("setsockopt failed");
 
 	struct iovec iv = {
 		.iov_base = input,
@@ -601,6 +602,8 @@ int main(int argc, char **argv) {
 	bool iface_set = false;
 	unsigned int last_ifindex = 0;
 	struct interface_delay_info *if_delay_info_list = NULL;
+
+	openlog("respondd", LOG_PID, LOG_DAEMON);
 
 	int c;
 	while ((c = getopt(argc, argv, "p:g:t:i:d:h")) != -1) {
