@@ -100,7 +100,7 @@ abort:
 }
 
 bool get_airtime(struct airtime_result *result, int ifx) {
-	bool ok = true;
+	bool ok;
 	int ctrl;
 	struct nl_sock *sk = NULL;
 	struct nl_msg *msg = NULL;
@@ -122,6 +122,8 @@ bool get_airtime(struct airtime_result *result, int ifx) {
 	CHECK(nl_recvmsgs_default(sk) >= 0);
 
 #undef CHECK
+
+	ok = true;
 
 nla_put_failure:
 out:

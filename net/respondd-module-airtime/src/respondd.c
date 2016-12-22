@@ -10,7 +10,7 @@ static void fill_airtime_json(struct airtime_result *air, struct json_object *wi
 	struct json_object *obj;
 
 	obj = json_object_new_object();
-	if(!obj)
+	if (!obj)
 		return;
 
 	json_object_object_add(obj, "frequency", json_object_new_int(air->frequency));
@@ -40,7 +40,7 @@ static struct json_object *respondd_provider_statistics(void) {
 
 	ifaces = get_ifaces();
 	while (ifaces != NULL) {
-		if(get_airtime(&airtime, ifaces->ifx))
+		if (get_airtime(&airtime, ifaces->ifx))
 			fill_airtime_json(&airtime, wireless);
 
 		void *freeptr = ifaces;
