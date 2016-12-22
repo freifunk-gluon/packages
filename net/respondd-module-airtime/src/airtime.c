@@ -100,13 +100,13 @@ abort:
 }
 
 bool get_airtime(struct airtime_result *result, int ifx) {
-	bool ok;
+	bool ok = false;
 	int ctrl;
 	struct nl_sock *sk = NULL;
 	struct nl_msg *msg = NULL;
 
 
-#define CHECK(x) { if (!(x)) { fprintf(stderr, "%s: error on line %d\n", __FILE__, __LINE__); ok = false; goto out; } }
+#define CHECK(x) { if (!(x)) { fprintf(stderr, "%s: error on line %d\n", __FILE__, __LINE__); goto out; } }
 
 	CHECK(sk = nl_socket_alloc());
 	CHECK(genl_connect(sk) >= 0);
