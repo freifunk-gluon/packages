@@ -35,8 +35,8 @@ endef
 
 
 define Package/respondd-module-airtime/install
-	$(INSTALL_DIR) $(1)/lib/respondd
-	$(CP) $(PKG_BUILD_DIR)/respondd.so $(1)/lib/respondd/airtime.so
+	$(INSTALL_DIR) $(1)/usr/lib/respondd
+	$(CP) $(PKG_BUILD_DIR)/respondd.so $(1)/usr/lib/respondd/airtime.so
 endef
 
 $(eval $(call BuildPackage,respondd-module-airtime))
