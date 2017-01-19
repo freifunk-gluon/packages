@@ -24,8 +24,8 @@ PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
 BATCTL_SOURCE_URL:=http://downloads.open-mesh.org/batman/releases/batman-adv-$(BATCTL_VERSION)
 
-include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/kernel.mk
+include $(INCLUDE_DIR)/package.mk
 
 PKG_BATCTL_BUILD_DIR:=$(PKG_BUILD_DIR)/batctl-$(BATCTL_VERSION)
 
