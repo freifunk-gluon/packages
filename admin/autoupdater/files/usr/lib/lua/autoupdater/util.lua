@@ -37,16 +37,24 @@ end
 
 
 -- Executes a command in the background, returning its PID and a pipe connected to the command's standard input
-function popen(...)
+function popen(write, ...)
   local inr, inw = nixio.pipe()
   local pid = nixio.fork()
 
   if pid > 0 then
-    inr:close()
-
-    return pid, inw
+    if write then
+      inr:close()
+      return pid, inw
+    else
+      inw:close()
+      return pid, inr
+    end
   elseif pid == 0 then
-    nixio.dup(inr, nixio.stdin)
+    if write then
+      nixio.dup(inr, nixio.stdin)
+    else
+      nixio.dup(inw, nixio.stdout)
+    end
 
     inr:close()
     inw:close()

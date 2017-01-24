@@ -99,7 +99,7 @@ local function verify_lines(lines, sigs)
 
 
   -- Call ecdsautils
-  local pid, f = autoupdater_util.popen(unpack(command))
+  local pid, f = autoupdater_util.popen(true, unpack(command))
 
   for _, line in ipairs(lines) do
     f:write(line)
@@ -131,47 +131,63 @@ local function read_manifest(mirror)
 
 
   local starttime = os.time()
-  local manifest_loader = io.popen(string.format("exec wget -T 120 -O- '%s/%s.manifest'", mirror, branch.name), 'r')
+  local pid, manifest_loader = autoupdater_util.popen(false, 'wget', '-T', '120', '-O-', string.format('%s/%s.manifest', mirror, branch.name))
+
+  local data = ''
 
   -- Read all lines from the manifest
   -- The upper part is saved to lines, the lower part to sigs
-  for line in manifest_loader:lines() do
+  while true do
     -- If the manifest download takes more than 5 minutes, we don't really
     -- have a chance to download a whole image
-    if os.difftime(os.time(), starttime) > 300 then
+    local timeout = starttime+300 - os.time()
+    if timeout < 0 or not nixio.poll({{fd = manifest_loader, events = nixio.poll_flags('in')}}, timeout * 1000) then
       io.stderr:write("Timeout while reading manifest.\n")
+      nixio.kill(pid, nixio.const.SIGTERM)
       manifest_loader:close()
       return nil
     end
 
-    if not sep then
-      if line == '---' then
-        sep = true
+    local r = manifest_loader:read(1024)
+    if not r or r == '' then
+      break
+    end
+    data = data .. r
+
+    while data:match('\n') do
+      local line, rest = data:match('^([^\n]*)\n(.*)$')
+      data = rest
+
+      if not sep then
+        if line == '---' then
+          sep = true
+        else
+          table.insert(lines, line)
+
+          if line == ('BRANCH=' .. branch.name) then
+            branch_ok = true
+          end
+
+          local date = line:match('^DATE=(.+)$')
+          local priority = line:match('^PRIORITY=([%d%.]+)$')
+          local model, version, checksum, filename = line:match('^([^ ]+) ([^ ]+) ([^ ]+) ([^ ]+)$')
+
+          if date then
+            ret.date = autoupdater_util.parse_date(date)
+          elseif priority then
+            ret.priority = tonumber(priority)
+          elseif model == platform_info.get_image_name() then
+            ret.version = version
+            ret.checksum = checksum
+            ret.filename = filename
+          end
+        end
       else
-        table.insert(lines, line)
-
-        if line == ('BRANCH=' .. branch.name) then
-          branch_ok = true
-        end
-
-        local date = line:match('^DATE=(.+)$')
-        local priority = line:match('^PRIORITY=([%d%.]+)$')
-        local model, version, checksum, filename = line:match('^([^ ]+) ([^ ]+) ([^ ]+) ([^ ]+)$')
-
-        if date then
-          ret.date = autoupdater_util.parse_date(date)
-        elseif priority then
-          ret.priority = tonumber(priority)
-        elseif model == platform_info.get_image_name() then
-          ret.version = version
-          ret.checksum = checksum
-          ret.filename = filename
-        end
+        table.insert(sigs, line)
       end
-    else
-      table.insert(sigs, line)
     end
   end
+  manifest_loader:close()
 
   -- Do some very basic checks before checking the signatures
   -- (as the signature verification is computationally expensive)
