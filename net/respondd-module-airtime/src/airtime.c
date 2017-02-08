@@ -57,40 +57,79 @@
  * @__NL80211_SURVEY_INFO_AFTER_LAST: internal use
  */
 
+static const char const* msg_names[NL80211_SURVEY_INFO_MAX + 1] = {
+	[NL80211_SURVEY_INFO_FREQUENCY] = "frequency",
+	[NL80211_SURVEY_INFO_CHANNEL_TIME] = "active",
+	[NL80211_SURVEY_INFO_CHANNEL_TIME_BUSY] = "busy",
+	[NL80211_SURVEY_INFO_CHANNEL_TIME_RX] = "rx",
+	[NL80211_SURVEY_INFO_CHANNEL_TIME_TX] = "tx",
+	[NL80211_SURVEY_INFO_NOISE] = "noise",
+};
+
 static int survey_airtime_handler(struct nl_msg *msg, void *arg) {
-	struct nlattr *tb[NL80211_ATTR_MAX + 1];
-	struct nlattr *sinfo[NL80211_SURVEY_INFO_MAX + 1];
-	static struct nla_policy survey_policy[NL80211_SURVEY_INFO_MAX + 1] = {
-		[NL80211_SURVEY_INFO_FREQUENCY] = { .type = NLA_U32 },
-		[NL80211_SURVEY_INFO_NOISE] = { .type = NLA_U8 },
-	};
+	struct json_object *parent_json = (struct json_object *) arg;
 
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
-	struct airtime_result *result = (struct airtime_result *) arg;
+	struct nlattr *survey_info = nla_find(genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NL80211_ATTR_SURVEY_INFO);
 
-	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NULL);
-
-	if (!tb[NL80211_ATTR_SURVEY_INFO]) {
-		fprintf(stderr, "survey data missing!\n");
+	if (!survey_info) {
+		fprintf(stderr, "respondd-module-airtime: survey data missing in netlink message\n");
 		goto abort;
 	}
 
-	if (nla_parse_nested(sinfo, NL80211_SURVEY_INFO_MAX, tb[NL80211_ATTR_SURVEY_INFO], survey_policy)) {
-		fprintf(stderr, "failed to parse nested attributes!\n");
+	struct json_object *freq_json = json_object_new_object();
+	if (!freq_json) {
+		fprintf(stderr, "respondd-module-airtime: failed allocating JSON object\n");
 		goto abort;
 	}
 
-	// Channel active?
-	if (!sinfo[NL80211_SURVEY_INFO_IN_USE]){
-		goto abort;
+	// This variable counts the number of required attributes that are
+	// found in the message and is afterwards checked against the number of
+	// required attributes.
+	unsigned int req_fields = 0;
+
+	int rem;
+	struct nlattr *nla;
+	nla_for_each_nested(nla, survey_info, rem) {
+		int type = nla_type(nla);
+
+		if (type > NL80211_SURVEY_INFO_MAX)
+			continue;
+
+		switch (type) {
+			// these are the required fields
+			case NL80211_SURVEY_INFO_IN_USE:
+			case NL80211_SURVEY_INFO_FREQUENCY:
+			case NL80211_SURVEY_INFO_CHANNEL_TIME:
+				req_fields++;
+		}
+
+		if (!msg_names[type])
+			continue;
+
+		struct json_object *data_json = NULL;
+		switch (nla_len(nla)) {
+			case sizeof(uint64_t):
+				data_json = json_object_new_int64(nla_get_u64(nla));
+				break;
+			case sizeof(uint32_t):
+				data_json = json_object_new_int(nla_get_u32(nla));
+				break;
+			case sizeof(uint8_t):
+				data_json = json_object_new_int(nla_get_u8(nla));
+				break;
+			default:
+				fprintf(stderr, "respondd-module-airtime: Unexpected NL attribute length: %d\n", nla_len(nla));
+		}
+
+		if (data_json)
+			json_object_object_add(freq_json, msg_names[type], data_json);
 	}
 
-	result->frequency   = nla_get_u32(sinfo[NL80211_SURVEY_INFO_FREQUENCY]);
-	result->active_time = nla_get_u64(sinfo[NL80211_SURVEY_INFO_CHANNEL_TIME]);
-	result->busy_time   = nla_get_u64(sinfo[NL80211_SURVEY_INFO_CHANNEL_TIME_BUSY]);
-	result->rx_time     = nla_get_u64(sinfo[NL80211_SURVEY_INFO_CHANNEL_TIME_RX]);
-	result->tx_time     = nla_get_u64(sinfo[NL80211_SURVEY_INFO_CHANNEL_TIME_TX]);
-	result->noise       = nla_get_u8(sinfo[NL80211_SURVEY_INFO_NOISE]);
+	if (req_fields == 3)
+		json_object_array_add(parent_json, freq_json);
+	else
+		json_object_put(freq_json);
 
 abort:
 	return NL_SKIP;
