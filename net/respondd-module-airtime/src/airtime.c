@@ -25,13 +25,10 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <sys/socket.h>
 #include <linux/nl80211.h>
-#include <netlink/netlink.h>
 #include <netlink/genl/genl.h>
-#include <netlink/genl/ctrl.h>
-#include <net/if.h>
 
+#include "netlink.h"
 #include "airtime.h"
 
 /*
@@ -99,39 +96,6 @@ abort:
 	return NL_SKIP;
 }
 
-bool get_airtime(struct airtime_result *result, int ifx) {
-	bool ok = false;
-	int ctrl;
-	struct nl_sock *sk = NULL;
-	struct nl_msg *msg = NULL;
-
-
-#define CHECK(x) { if (!(x)) { fprintf(stderr, "%s: error on line %d\n", __FILE__, __LINE__); goto out; } }
-
-	CHECK(sk = nl_socket_alloc());
-	CHECK(genl_connect(sk) >= 0);
-
-	CHECK(ctrl = genl_ctrl_resolve(sk, NL80211_GENL_NAME));
-	CHECK(nl_socket_modify_cb(sk, NL_CB_VALID, NL_CB_CUSTOM, survey_airtime_handler, result) == 0);
-	CHECK(msg = nlmsg_alloc());
-	CHECK(genlmsg_put(msg, 0, 0, ctrl, 0, NLM_F_DUMP, NL80211_CMD_GET_SURVEY, 0));
-
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifx);
-
-	CHECK(nl_send_auto_complete(sk, msg) >= 0);
-	CHECK(nl_recvmsgs_default(sk) >= 0);
-
-#undef CHECK
-
-	ok = true;
-
-nla_put_failure:
-out:
-	if (msg)
-		nlmsg_free(msg);
-
-	if (sk)
-		nl_socket_free(sk);
-
-	return ok;
+bool get_airtime(struct json_object *result, int ifx) {
+	return nl_send_dump(survey_airtime_handler, result, NL80211_CMD_GET_SURVEY, ifx);
 }

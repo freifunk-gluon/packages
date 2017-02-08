@@ -1,12 +1,8 @@
-#include <sys/socket.h>
 #include <linux/nl80211.h>
-#include <netlink/netlink.h>
 #include <netlink/genl/genl.h>
-#include <netlink/genl/ctrl.h>
-#include <net/if.h>
-#include <stdlib.h>
 
 #include "ifaces.h"
+#include "netlink.h"
 
 static int iface_dump_handler(struct nl_msg *msg, void *arg) {
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
@@ -31,32 +27,7 @@ skip:
 }
 
 struct iface_list *get_ifaces() {
-	int ctrl;
-	struct nl_sock *sk = NULL;
-	struct nl_msg *msg = NULL;
 	struct iface_list *ifaces = NULL;
-
-#define CHECK(x) { if (!(x)) { fprintf(stderr, "%s: error on line %d\n", __FILE__,  __LINE__); goto out; } }
-
-	CHECK(sk = nl_socket_alloc());
-	CHECK(genl_connect(sk) >= 0);
-
-	CHECK(ctrl = genl_ctrl_resolve(sk, NL80211_GENL_NAME));
-	CHECK(nl_socket_modify_cb(sk, NL_CB_VALID, NL_CB_CUSTOM, iface_dump_handler, &ifaces) == 0);
-	CHECK(msg = nlmsg_alloc());
-	CHECK(genlmsg_put(msg, 0, 0, ctrl, 0, NLM_F_DUMP, NL80211_CMD_GET_INTERFACE, 0));
-
-	CHECK(nl_send_auto_complete(sk, msg) >= 0);
-	CHECK(nl_recvmsgs_default(sk) >= 0);
-
-#undef CHECK
-
-out:
-	if (msg)
-		nlmsg_free(msg);
-
-	if (sk)
-		nl_socket_free(sk);
-
+	nl_send_dump(&iface_dump_handler, &ifaces, NL80211_CMD_GET_INTERFACE, 0);
 	return ifaces;
 }
