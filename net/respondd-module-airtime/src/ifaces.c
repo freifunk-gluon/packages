@@ -12,12 +12,17 @@ static int iface_dump_handler(struct nl_msg *msg, void *arg) {
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NULL);
 
+	if (!tb[NL80211_ATTR_WIPHY] || !tb[NL80211_ATTR_IFINDEX])
+		goto skip;
+
 	wiphy = nla_get_u32(tb[NL80211_ATTR_WIPHY]);
 	for (last_next = arg; *last_next != NULL; last_next = &(*last_next)->next) {
 		if ((*last_next)->wiphy == wiphy)
 			goto skip;
 	}
 	*last_next = malloc(sizeof(**last_next));
+	if (!*last_next)
+		goto skip;
 	(*last_next)->next = NULL;
 	(*last_next)->ifx = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
 	(*last_next)->wiphy = wiphy;
