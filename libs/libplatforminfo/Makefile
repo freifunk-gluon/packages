@@ -18,7 +18,7 @@ define Package/libplatforminfo
   SECTION:=libs
   CATEGORY:=Libraries
   TITLE:=Platform information library
-  DEPENDS:=@(TARGET_ar71xx_generic||TARGET_ar71xx_mikrotik||TARGET_ar71xx_nand||TARGET_mpc85xx_generic||TARGET_x86_generic||TARGET_x86_geode||TARGET_x86_kvm_guest||TARGET_x86_64||TARGET_x86_xen_domu||TARGET_ramips_mt7621||TARGET_ramips_rt305x||TARGET_brcm2708_bcm2708||TARGET_brcm2708_bcm2709||TARGET_sunxi||TARGET_mvebu)
+  DEPENDS:=@(TARGET_ar71xx_generic||TARGET_ar71xx_mikrotik||TARGET_ar71xx_nand||TARGET_mpc85xx_generic||TARGET_x86_generic||TARGET_x86_geode||TARGET_x86_kvm_guest||TARGET_x86_64||TARGET_x86_xen_domu||TARGET_ramips_mt7621||TARGET_ramips_mt7628||TARGET_ramips_rt305x||TARGET_brcm2708_bcm2708||TARGET_brcm2708_bcm2709||TARGET_sunxi||TARGET_mvebu)
 endef
 
 CMAKE_OPTIONS += \
