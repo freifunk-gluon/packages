@@ -30,6 +30,8 @@ version_file:close()
 -- If force is true the updater will perform an upgrade regardless of
 -- the priority and even when it is disabled in uci
 local force = false
+-- if you want to skip release test also
+local superforce = false
 
 -- If fallback is true the updater will perform an update only if the
 -- timespan given by the priority and another 24h have passed
@@ -40,6 +42,9 @@ local function parse_args()
   local i = 1
   while arg[i] do
     if arg[i] == '-f' then
+      force = true
+    elseif arg[i] == '-F' then
+      superforce = true
       force = true
     elseif arg[i] == '--fallback' then
       fallback = true
@@ -284,8 +289,10 @@ local function autoupdate(mirror)
   end
 
   if not autoupdater_version.newer_than(manifest.version, old_version) then
+    if superforce ~= true then
+      return true
+    end
     io.stderr:write('No new firmware available.\n')
-    return true
   end
 
   io.stderr:write('New version available.\n')
