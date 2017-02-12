@@ -36,45 +36,7 @@ static char * model = NULL;
 
 
 __attribute__((constructor)) static void init(void) {
-        FILE *f = fopen("/proc/cpuinfo", "r");
-        if (!f)
-                return;
-
-        char *line = NULL;
-        size_t len = 0;
-
-        while (getline(&line, &len, f) >= 0 && !model) {
-                if (strncmp(line, "model name", 10))
-                        continue;
-
-                bool colon = false;
-
-                char *p;
-                for (p = line + 10; *p; p++) {
-                        if (isblank(*p))
-                                continue;
-
-                        if (!colon) {
-                                if (*p == ':') {
-                                        colon = true;
-                                        continue;
-                                }
-                                else {
-                                        break;
-                                }
-                        }
-
-                        size_t len = strlen(p);
-                        if (len && p[len-1] == '\n')
-                                p[len-1] = 0;
-
-                        model = strdup(p);
-                        break;
-                }
-        }
-
-        free(line);
-        fclose(f);
+        model = read_line("/tmp/sysinfo/model");
 }
 
 __attribute__((destructor)) static void deinit(void) {
