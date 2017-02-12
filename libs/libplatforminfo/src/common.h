@@ -61,6 +61,11 @@ __attribute__((unused)) static char * read_line(const char *filename) {
 }
 
 __attribute__((unused)) static void sanitize_image_name(char **outp, char *in) {
+        if (!in) {
+                *outp = NULL;
+                return;
+        }
+
         char *out = malloc(strlen(in) + 1);
         *outp = out;
 
