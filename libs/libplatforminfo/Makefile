@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/target.mk
 
 PKG_NAME:=libplatforminfo
-PKG_VERSION:=1
+PKG_VERSION:=2
 CMAKE_INSTALL:=1
 
 PKG_LICENSE:=BSD-2-Clause
