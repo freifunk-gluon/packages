@@ -20,9 +20,18 @@ else(SUBTARGET)
   add_definitions(-DTARGET_${TARGET})
 endif(SUBTARGET)
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/targets/${FULL_TARGET}.c")
+  set(TARGET_SOURCE "targets/${FULL_TARGET}.c")
+elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/targets/${TARGET}.c")
+  set(TARGET_SOURCE "targets/${TARGET}.c")
+else()
+  set(TARGET_SOURCE "targets/default.c")
+endif()
+
+
 add_library(platforminfo SHARED
   common.c
-  targets/${FULL_TARGET}.c
+  ${TARGET_SOURCE}
 )
 set_target_properties(platforminfo PROPERTIES
   COMPILE_FLAGS "-Wall -std=c99 -D_GNU_SOURCE"
