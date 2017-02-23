@@ -10,7 +10,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=batman-adv-legacy
 
-PKG_VERSION:=2017-02-23
+PKG_VERSION:=2017-02-24
 PKG_RELEASE:=1
 
 BATCTL_VERSION:=2013.4.0
@@ -19,7 +19,7 @@ BATCTL_MD5SUM:=42e269cc710bbc9a8fd17628201d4258
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=git://github.com/freifunk-gluon/batman-adv-legacy.git
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=6e0cb5527fc0da1b678885e29c6d7f8f679c92a9
+PKG_SOURCE_VERSION:=fad4cc3b05c3605f710eff2571d81ed1707c41a1
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
 BATCTL_SOURCE_URL:=http://downloads.open-mesh.org/batman/releases/batman-adv-$(BATCTL_VERSION)
