@@ -35,6 +35,7 @@ local force = false
 -- timespan given by the priority and another 24h have passed
 local fallback = false
 
+local mirrors = {}
 
 local function parse_args()
   local i = 1
@@ -52,9 +53,11 @@ local function parse_args()
       end
 
       branch_name = arg[i]
-    else
+    elseif arg[i]:sub(0, 1) == '-' then
       io.stderr:write("Error parsing command line: unexpected argument '" .. arg[i] .. "'\n")
       os.exit(1)
+    else
+      table.insert(mirrors, arg[i])
     end
 
     i = i+1
@@ -350,10 +353,13 @@ if not lockfd:lock('tlock') then
 end
 
 
-local mirrors = branch.mirror
+if #mirrors == 0 then
+  while #branch.mirror > 0 do
+    table.insert(mirrors, table.remove(branch.mirror, math.random(#branch.mirror)))
+  end
+end
 
-while #mirrors > 0 do
-  local mirror = table.remove(mirrors, math.random(#mirrors))
+for k, mirror in ipairs(mirrors) do
   if autoupdate(mirror) then
     os.exit(0)
   end
