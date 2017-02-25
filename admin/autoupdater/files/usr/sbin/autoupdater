@@ -179,7 +179,7 @@ local function read_manifest(mirror)
 						ret.date = autoupdater_util.parse_date(date)
 					elseif priority then
 						ret.priority = tonumber(priority)
-					elseif model == platform_info.get_image_name() then
+					elseif model == platform_info.get_image_name() and #checksum == 64 then
 						ret.version = version
 						ret.checksum = checksum
 						ret.filename = filename
@@ -308,7 +308,7 @@ local function autoupdate(mirror)
 		return false
 	end
 
-	local popen = io.popen(string.format("exec sha512sum '%s'", image))
+	local popen = io.popen(string.format("exec sha256sum '%s'", image))
 	local checksum = popen:read('*l'):match('^%x+')
 	popen:close()
 	if checksum ~= manifest.checksum then
