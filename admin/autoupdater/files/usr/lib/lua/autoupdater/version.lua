@@ -38,7 +38,7 @@ function newer_than(a, b)
 			local bc = char_order(b, bpos)
 
 			if ac ~= bc then
-	return ac > bc
+				return ac > bc
 			end
 
 			apos = apos + 1
@@ -55,7 +55,7 @@ function newer_than(a, b)
 
 		while isdigit(a, apos) and isdigit(b, bpos) do
 			if first_diff == 0 then
-	first_diff = char_value(a, apos) - char_value(b, bpos)
+				first_diff = char_value(a, apos) - char_value(b, bpos)
 			end
 
 			apos = apos + 1
