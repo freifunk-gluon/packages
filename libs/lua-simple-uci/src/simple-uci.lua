@@ -93,7 +93,7 @@ end
 
 function Cursor:get_bool(...)
 	local val = self:get(...)
-	return ( val == "1" or val == "true" or val == "yes" or val == "on" )
+	return val == "1"
 end
 
 function Cursor:get_list(config, section, option)
@@ -114,8 +114,7 @@ function Cursor:get_first(conf, stype, opt, def)
 			if type(def) == "number" then
 				val = tonumber(val)
 			elseif type(def) == "boolean" then
-				val = (val == "1" or val == "true" or
-				       val == "yes" or val == "on")
+				val = val == "1"
 			end
 
 			if val ~= nil then
