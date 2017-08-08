@@ -31,7 +31,7 @@ function Cursor:set(config, section, option, value)
 
 		return uciset(self, config, section, option, value)
 	else
-		return uciset(self, config, section, option)
+		return self:delete(config, section, option)
 	end
 end
 
@@ -68,7 +68,7 @@ end
 function Cursor:section(config, type, name, values)
 	local stat = true
 	if name then
-		stat = self:set(config, name, type)
+		stat = uciset(self, config, name, type)
 	else
 		name = self:add(config, type)
 		stat = name and true
