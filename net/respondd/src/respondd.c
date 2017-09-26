@@ -183,11 +183,19 @@ static const struct respondd_provider_info * get_providers(const char *filename)
 	snprintf(path, sizeof(path), "./%s", filename);
 
 	void *handle = dlopen(path, RTLD_NOW|RTLD_LOCAL);
-	if (!handle)
+	if (!handle) {
+		syslog(LOG_WARNING, "unable to open provider module '%s', ignoring: %s", filename, dlerror());
 		return NULL;
+	}
+
+	// clean a potential previous error
+	dlerror();
 
 	const struct respondd_provider_info *ret = dlsym(handle, "respondd_providers");
 	if (!ret) {
+		syslog(LOG_WARNING,
+				"unable to load providers from '%s', ignoring: %s",
+				filename, dlerror() ?: "'respondd_providers' == NULL");
 		dlclose(handle);
 		return NULL;
 	}
