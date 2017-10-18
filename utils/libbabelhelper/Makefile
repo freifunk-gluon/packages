@@ -1,12 +1,11 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libbabelhelper
-PKG_RELEASE:=1
-PKG_VERSION:=1
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL=https://github.com/christf/libbabelhelper.git
-PKG_SOURCE_VERSION:=d1b8b6f6cdf51aacedcab0ee5d9b18e21fb264ff
+PKG_SOURCE_URL:=https://github.com/christf/libbabelhelper.git
+PKG_SOURCE_VERSION:=e9386644cda44030b353f9444cb9d549463a3f9a
+PKG_SOURCE_DATE:=2017-10-17
 
 CMAKE_INSTALL:=1
 
@@ -22,7 +21,7 @@ endef
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include
-	$(CP) $(PKG_INSTALL_DIR)/usr/include/libbabelhelper-$(PKG_VERSION) $(1)/usr/include/
+	$(CP) $(PKG_INSTALL_DIR)/usr/include/libbabelhelper-* $(1)/usr/include/
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libbabelhelper.so* $(1)/usr/lib/
 	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
