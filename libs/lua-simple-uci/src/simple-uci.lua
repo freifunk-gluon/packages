@@ -24,14 +24,15 @@ local Cursor = getmetatable(cursor())
 local uciset = Cursor.set
 
 function Cursor:set(config, section, option, value)
-	if value ~= nil then
+	if value ~= nil and not (type(value) == 'table' and #value == 0) then
 		if type(value) == 'boolean' then
 			value = value and '1' or '0'
 		end
 
 		return uciset(self, config, section, option, value)
 	else
-		return self:delete(config, section, option)
+		self:delete(config, section, option)
+		return true
 	end
 end
 
@@ -128,9 +129,6 @@ end
 
 function Cursor:set_list(config, section, option, value)
 	if config and section and option then
-		if not value or #value == 0 then
-			return self:delete(config, section, option)
-		end
 		return self:set(
 			config, section, option,
 			(type(value) == "table" and value or { value })
