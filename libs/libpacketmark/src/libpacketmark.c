@@ -38,7 +38,8 @@ static int mark;
 static int (*socket_real)(int domain, int type, int protocol);
 
 
-void _init(void) {
+__attribute__((constructor))
+static void init(void) {
 	const char *str = getenv("LIBPACKETMARK_MARK");
 	if (str)
 		mark = atoi(str);
