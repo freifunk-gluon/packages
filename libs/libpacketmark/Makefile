@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libpacketmark
-PKG_VERSION:=2
+PKG_VERSION:=3
 
 include $(INCLUDE_DIR)/package.mk
 
