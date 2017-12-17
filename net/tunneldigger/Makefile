@@ -1,9 +1,9 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=tunneldigger
-PKG_VERSION:=0.4.7
+PKG_VERSION:=0.4.0
 PKG_RELEASE:=1
-PKG_REV:=7cc92020cbafe5be2b24eb6bc943a65f151c2a18
+PKG_REV:=d7db350011076d6a83855d412885a29a7d142b6e 
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=git://github.com/wlanslovenija/tunneldigger.git
@@ -12,6 +12,7 @@ PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 PKG_SOURCE_VERSION:=$(PKG_REV)
 
 include $(INCLUDE_DIR)/package.mk
+include $(INCLUDE_DIR)/cmake.mk
 
 define Package/tunneldigger
   SECTION:=net
@@ -27,13 +28,12 @@ TARGET_CFLAGS += \
 
 define Build/Prepare
 	$(call Build/Prepare/Default)
-	mv $(PKG_BUILD_DIR)/client/* $(PKG_BUILD_DIR)
-	sed -i s/-lnl/-lnl-tiny/g $(PKG_BUILD_DIR)/Makefile
+	$(CP) $(PKG_BUILD_DIR)/client/* $(PKG_BUILD_DIR)
 endef
 
 define Package/tunneldigger/install
 	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/l2tp_client $(1)/usr/bin/tunneldigger
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/tunneldigger $(1)/usr/bin/tunneldigger
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/tunneldigger.init $(1)/etc/init.d/tunneldigger
 	$(INSTALL_DIR) $(1)/etc/config
