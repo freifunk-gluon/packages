@@ -1,15 +1,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=tunneldigger
-PKG_VERSION:=0.4.0
 PKG_RELEASE:=1
-PKG_REV:=d7db350011076d6a83855d412885a29a7d142b6e 
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_SOURCE_URL:=git://github.com/wlanslovenija/tunneldigger.git
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=$(PKG_REV)
+PKG_SOURCE_URL:=git://github.com/wlanslovenija/tunneldigger.git
+PKG_SOURCE_DATE:=2017-12-13
+PKG_SOURCE_VERSION:=d7db350011076d6a83855d412885a29a7d142b6e
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
