@@ -1,0 +1,38 @@
+From 8a2bd557adb7d004e0fa46bfac9f331cb67c50ab Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Linus=20L=C3=BCssing?= <linus.luessing@web.de>
+Date: Sun, 2 Mar 2014 23:18:00 +0100
+Subject: [PATCH 5/5] batctl: fix wrong header lines number for local
+ translation table
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+A commit in batman-adv has added a second header line to the local
+translation table output.
+
+Introduced by 59cb0861498776c62bd17584c31f34477fa301a0
+("batman-adv: improve local translation table output")
+
+Signed-off-by: Linus Lüssing <linus.luessing@web.de>
+Acked-by: Antonio Quartulli <antonio@meshcoding.com>
+Signed-off-by: Marek Lindner <mareklindner@neomailbox.ch>
+---
+ debug.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/debug.c b/debug.c
+index c879603..39f80a6 100644
+--- a/debug.c
++++ b/debug.c
+@@ -50,7 +50,7 @@ const struct debug_table_data batctl_debug_tables[BATCTL_TABLE_NUM] = {
+ 		.opt_long = "translocal",
+ 		.opt_short = "tl",
+ 		.debugfs_name = "transtable_local",
+-		.header_lines = 1,
++		.header_lines = 2,
+ 	},
+ 	{
+ 		.opt_long = "transglobal",
+-- 
+2.11.0
+
