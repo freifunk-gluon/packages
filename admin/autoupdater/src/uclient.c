@@ -162,12 +162,18 @@ int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data,
 
 	struct uclient *cl = uclient_new(url, NULL, &cb);
 	cl->priv = &d;
-	uclient_set_timeout(cl, TIMEOUT_MSEC);
-	uclient_connect(cl);
-	uclient_http_set_request_type(cl, "GET");
-	uclient_http_reset_headers(cl);
-	uclient_http_set_header(cl, "User-Agent", user_agent);
-	uclient_request(cl);
+	if (uclient_set_timeout(cl, TIMEOUT_MSEC))
+		goto err;
+	if (uclient_connect(cl))
+		goto err;
+	if (uclient_http_set_request_type(cl, "GET"))
+		goto err;
+	if (uclient_http_reset_headers(cl))
+		goto err;
+	if (uclient_http_set_header(cl, "User-Agent", user_agent))
+		goto err;
+	if (uclient_request(cl))
+		goto err;
 	uloop_run();
 	uclient_free(cl);
 
@@ -175,4 +181,8 @@ int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data,
 		return UCLIENT_ERROR_SIZE_MISMATCH;
 
 	return d.err_code;
+
+err:
+	uclient_free(cl);
+	return UCLIENT_ERROR_CONNECT;
 }
