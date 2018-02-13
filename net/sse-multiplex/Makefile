@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=sse-multiplex
-PKG_VERSION:=1
+PKG_VERSION:=2
 
 PKG_LICENSE:=BSD-2-Clause
 
