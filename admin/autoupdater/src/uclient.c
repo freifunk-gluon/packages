@@ -161,6 +161,9 @@ int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data,
 	};
 
 	struct uclient *cl = uclient_new(url, NULL, &cb);
+	if (!cl)
+		goto err;
+
 	cl->priv = &d;
 	if (uclient_set_timeout(cl, TIMEOUT_MSEC))
 		goto err;
@@ -183,6 +186,8 @@ int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data,
 	return d.err_code;
 
 err:
-	uclient_free(cl);
+	if (cl)
+		uclient_free(cl);
+
 	return UCLIENT_ERROR_CONNECT;
 }
