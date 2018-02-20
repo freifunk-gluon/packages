@@ -100,3 +100,15 @@ float get_uptime(void) {
 	fputs("autoupdater: error: unable to determine uptime\n", stderr);
 	exit(1);
 }
+
+void *safe_malloc(size_t size, char *errmsg) {
+	void *ret = malloc(size);
+
+	if (ret)
+		return ret;
+
+	if (errmsg)
+		fprintf(stderr, "autoupdater: error: %s\n", errmsg);
+
+	abort();
+}

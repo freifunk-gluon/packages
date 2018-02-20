@@ -28,3 +28,4 @@
 void run_dir(const char *dir);
 void randomize(void);
 float get_uptime(void);
+void *safe_malloc(size_t size, char *errmsg);

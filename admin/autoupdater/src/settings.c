@@ -27,6 +27,7 @@
 
 #include "settings.h"
 #include "hexutil.h"
+#include "util.h"
 
 #include <uci.h>
 
@@ -97,7 +98,7 @@ static const char ** load_string_list(struct uci_context *ctx, struct uci_sectio
 		i++;
 
 	*len = i;
-	const char **ret = malloc(i * sizeof(char *));
+	const char **ret = safe_malloc(i * sizeof(char *), "failed to allocate string list");
 
 	i = 0;
 	uci_foreach_element(&o->v.list, e)
@@ -109,6 +110,11 @@ static const char ** load_string_list(struct uci_context *ctx, struct uci_sectio
 
 void load_settings(struct settings *settings) {
 	struct uci_context *ctx = uci_alloc_context();
+	if (!ctx) {
+		fprintf(stderr, "autoupdater: error: failed to allocate uci context\n");
+		exit(1);
+	}
+
 	ctx->flags &= ~UCI_FLAG_STRICT;
 
 	struct uci_package *p;
@@ -154,7 +160,7 @@ void load_settings(struct settings *settings) {
 		settings->mirrors = load_string_list(ctx, branch, "mirror", &settings->n_mirrors);
 
 	const char **pubkeys_str = load_string_list(ctx, branch, "pubkey", &settings->n_pubkeys);
-	settings->pubkeys = malloc(settings->n_pubkeys * sizeof(ecc_25519_work_t));
+	settings->pubkeys = safe_malloc(settings->n_pubkeys * sizeof(ecc_25519_work_t), "failed to allocate memory for public keys");
 	size_t ignored_keys = 0;
 	for (size_t i = 0; i < settings->n_pubkeys; i++) {
 		ecc_int256_t pubkey_packed;

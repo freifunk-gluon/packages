@@ -144,7 +144,8 @@ static void parse_args(int argc, char *argv[], struct settings *settings) {
 
 	if (optind < argc) {
 		settings->n_mirrors = argc - optind;
-		settings->mirrors = malloc(settings->n_mirrors * sizeof(char *));
+		settings->mirrors = safe_malloc(settings->n_mirrors * sizeof(char *), "failed to allocate memory for mirror list");
+
 		for (int i = optind; i < argc; i++) {
 			settings->mirrors[i - optind] = argv[i];
 		}
