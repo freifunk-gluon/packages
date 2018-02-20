@@ -110,6 +110,11 @@ static const char ** load_string_list(struct uci_context *ctx, struct uci_sectio
 
 void load_settings(struct settings *settings) {
 	struct uci_context *ctx = uci_alloc_context();
+	if (!ctx) {
+		fprintf(stderr, "autoupdater: error: failed to allocate uci context\n");
+		exit(1);
+	}
+
 	ctx->flags &= ~UCI_FLAG_STRICT;
 
 	struct uci_package *p;
