@@ -23,9 +23,9 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 #include "hexutil.h"
 #include "manifest.h"
+#include "util.h"
 
 #include <errno.h>
 #include <limits.h>
@@ -80,7 +80,8 @@ static bool parse_rfc3339(const char *input, time_t *date) {
 
 void parse_line(char *line, struct manifest *m, const char *branch, const char *image_name) {
 	if (m->sep_found) {
-		ecdsa_signature_t *sig = malloc(sizeof(ecdsa_signature_t));
+		ecdsa_signature_t *sig = safe_malloc(sizeof(ecdsa_signature_t), "failed to allocate memory for signature");
+
 		if (!parsehex(sig, line, sizeof(*sig))) {
 			free(sig);
 			fprintf(stderr, "autoupdater: warning: garbage in signature area: %s\n", line);
