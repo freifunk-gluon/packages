@@ -100,3 +100,23 @@ float get_uptime(void) {
 	fputs("autoupdater: error: unable to determine uptime\n", stderr);
 	exit(1);
 }
+
+void * safe_malloc(size_t size) {
+	void *ret = malloc(size);
+	if (!ret) {
+		fprintf(stderr, "autoupdater: error: failed to allocate memory\n");
+		abort();
+	}
+
+	return ret;
+}
+
+void * safe_realloc(void *ptr, size_t size) {
+	void *ret = realloc(ptr, size);
+	if (!ret) {
+		fprintf(stderr, "autoupdater: error: failed to allocate memory\n");
+		abort();
+	}
+
+	return ret;
+}
