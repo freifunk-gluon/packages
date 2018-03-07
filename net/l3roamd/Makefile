@@ -6,8 +6,6 @@ PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL=https://github.com/freifunk-gluon/l3roamd.git
 PKG_SOURCE_VERSION:=cc4dcfbe80392d271477716559e9b0956181e7b7
 
-CMAKE_OPTIONS += -DCMAKE_BUILD_TYPE:STRING=MINSIZEREL
-
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
 

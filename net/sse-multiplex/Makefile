@@ -5,8 +5,6 @@ PKG_VERSION:=2
 
 PKG_LICENSE:=BSD-2-Clause
 
-PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
-
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
 
@@ -17,12 +15,7 @@ define Package/sse-multiplex
   TITLE:=Allows multiple clients to receive the same Server-Sent Event stream
 endef
 
-CMAKE_OPTIONS += -DCMAKE_BUILD_TYPE:STRING=MINSIZEREL -DSSE_MULTIPLEX_SOCKET:STRING=/var/run/sse-multiplex.sock
-
-define Build/Prepare
-	mkdir -p $(PKG_BUILD_DIR)
-	$(CP) ./src/* $(PKG_BUILD_DIR)/
-endef
+CMAKE_OPTIONS += -DSSE_MULTIPLEX_SOCKET:STRING=/var/run/sse-multiplex.sock
 
 define Package/sse-multiplex/install
 	$(INSTALL_DIR) $(1)/usr/sbin

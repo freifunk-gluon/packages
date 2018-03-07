@@ -14,9 +14,6 @@ define Package/lua-simple-uci
 	DEPENDS:=+libuci-lua
 endef
 
-define Build/Configure
-endef
-
 define Build/Compile
 endef
 

@@ -14,12 +14,6 @@ define Package/lua-jsonc
   DEPENDS:=+liblua +libjson-c
 endef
 
-
-define Build/Prepare
-	mkdir -p $(PKG_BUILD_DIR)
-	$(CP) ./src/* $(PKG_BUILD_DIR)/
-endef
-
 define Package/lua-jsonc/install
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/* $(1)/usr/lib/
