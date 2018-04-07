@@ -10,7 +10,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=batman-adv-legacy
 
-PKG_VERSION:=2018-03-16
+PKG_VERSION:=2018-04-07
 PKG_RELEASE:=1
 
 BATCTL_VERSION:=2013.4.0
