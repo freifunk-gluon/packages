@@ -9,7 +9,7 @@ define Package/simple-tc
   SECTION:=net
   CATEGORY:=Network
   TITLE:=Simple bandwidth limiting
-  DEPENDS:=+kmod-sched +libnl-tiny
+  DEPENDS:=+!KERNEL_NET_SCH_TBF:kmod-sched-core +!KERNEL_NET_SCH_INGRESS:kmod-sched-core +!KERNEL_NET_CLS_BASIC:kmod-sched +libnl-tiny
 endef
 
 TARGET_CFLAGS += -I$(STAGING_DIR)/usr/include/libnl-tiny
