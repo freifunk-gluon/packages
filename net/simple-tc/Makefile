@@ -3,6 +3,8 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=simple-tc
 PKG_VERSION:=1
 
+PKG_CONFIG_DEPENDS := CONFIG_KERNEL_NET_SCH_TBF CONFIG_KERNEL_NET_SCH_INGRESS CONFIG_KERNEL_NET_CLS_BASIC
+
 include $(INCLUDE_DIR)/package.mk
 
 define Package/simple-tc
