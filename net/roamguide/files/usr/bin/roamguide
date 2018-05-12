@@ -1,0 +1,106 @@
+#!/bin/sh
+
+. /lib/functions.
+
+LOCK="/tmp/ide.lock"
+
+try_lock(){
+  mkdir "$LOCK" || echo "Already running!"
+  trap "ir $LOCK" EXIT
+}
+
+wifi_kick(){
+  local dev="$1" ; shift
+  local mac="$1" ; shift
+  local bantime="$1" ; shift
+  ubus call hostapd.${dev} del_client '{ "addr" : "'${mac}'", "reason" : "assoc toomany", "ban_time" : '${bantime}' }'
+}
+
+count_file(){
+  echo "/tmp/roam-${1}-${2}"
+}
+
+count_get(){
+  local fn=$(count_file $@)
+  if [ -e "$fn" ] ; then
+    touch "$fn"
+    cat $fn
+  else
+     echo 0
+  fi
+}
+
+count_inc(){
+  expr $(count_get $@) + 1 > $(count_file $@)
+}
+
+count_dec(){
+  $(expr $(count_get $@) - 1) > $(count_file $@)
+}
+
+count_rm(){
+  local fn=$(count_file $@)
+  if [ -e $fn ] ; then
+    logger -s -t roamguide "forget" $@
+    rm $fn
+  fi
+}
+
+count_cleanup() {
+  local device="$1" ; shift
+  local current_time=$(date +%s)
+  for file in $(find /tmp -maxdepth 1 -name "roam-${device}-*" -type f ); do
+    [ "$(expr "$current_time" - $(date +%s -r $file))" -gt "$forget_time" ] && rm $file
+  done
+}
+
+client_macs() {
+  local dev="$1"
+  iw dev "${dev}" station dump | grep Station | sed -e 's/^[^ ]\+ \([0-9a-z:]*\) .*/\1/' 
+}
+
+client_tq() {
+  local dev="$1"
+  local mac="$2"
+  iw dev "${dev}" station get "${mac}" | grep "signal avg" | xargs | cut -d' ' -f 3
+}
+
+roamguide() {
+  local s="$1"
+  config_get_bool enabled "$s" 'enabled' 0
+  [ $enabled -ne 0 ] || return 0
+
+  config_get device "$s" device
+  config_get forget_time "$s" forget_time 600
+  config_get bantime_base "$s" bantime_base 500
+  config_get bantime_factor "$s" bantime_factor 2375
+
+  for mac in $(client_macs "${device}") ; do
+    tq=$(client_tq "${device}" "${mac}")
+    level=1
+    config_list_foreach "$s" signal roamlevel "${tq}" "${device}" "${mac}"
+  done
+  count_cleanup ${device}
+}
+
+roamlevel(){
+  local roam_tq="$1" ; shift
+  local tq="$1" ; shift
+  local device="$1" ; shift
+  local mac="$1" ; shift
+  if [ ${tq} -le ${roam_tq} ]; then
+    mac_count=$(count_get "${device}" "${mac}")
+    if [ $mac_count -lt $level ] ; then
+      count_inc ${device} ${mac}
+      local bantime=$(expr $bantime_base + $(expr $mac_count \* $mac_count) \* $bantime_factor)
+      logger -s -t roamguide "${device}: ban ${mac} ${tq}dBm for ${bantime}ms"
+      wifi_kick "${device}" "${mac}" "${bantime}"
+      break # quits config_list_foreach
+    fi 
+  fi
+  level=$(expr $level + 1)
+}
+
+try_lock
+config_load 'roamguide'
+config_foreach roamguide 'roamguide'

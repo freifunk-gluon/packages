@@ -1,0 +1,11 @@
+# repeat the following for every wireless AP device you like to guide.
+config roamguide
+   option device "client0" # wireless AP device we like to guide
+   list signal '-60' # first penality level
+   list signal '-77' # second penality level
+   list signal '-85' # final penality level
+   option bantime_base '500'    # on the first level ban for 500ms
+   option bantime_factor '2375' # on the second one for 2775ms,
+                                # and in the final 10000ms
+   option forget_time '600' # Forget about a client after 10s
+   option enabled '1' # set to '0' to disable this profile

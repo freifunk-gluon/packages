@@ -1,0 +1,13 @@
+#!/bin/sh
+
+LOCK="/tmp/roamguide-loop.lock"
+
+try_lock(){
+  mkdir "$LOCK" || echo "Already running!"
+  trap "rmdir $LOCK" EXIT
+}
+
+/sbin/logread -f -e '\<hostapd\>.*\<associated\>' |\
+  while read line ; do
+    /usr/bin/roamguide
+  done
