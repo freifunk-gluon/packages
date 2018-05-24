@@ -86,7 +86,7 @@ static void usage(void) {
 		"                       really flash a new firmware if one is available.\n\n"
 		"  --fallback           Upgrade if and only if the upgrade timespan of the new\n"
 		"                       version has passed for at least 24 hours.\n\n"
-		"  --force-version      Skip version check and allow downgrades therefore.\n\n"
+		"  --force-version      Skip version check to allow downgrades.\n\n"
 		"  <mirror> ...         Override the mirror URLs given in the configuration. If\n"
 		"                       specified, these are not shuffled.\n\n",
 		stderr
