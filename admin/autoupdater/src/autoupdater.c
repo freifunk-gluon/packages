@@ -101,7 +101,7 @@ static void parse_args(int argc, char *argv[], struct settings *settings) {
 		OPTION_HELP = 'h',
 		OPTION_NO_ACTION = 'n',
 		OPTION_FALLBACK = 256,
-		OPTION_NO_VERSIONCHECK = 255,
+		OPTION_NO_VERSIONCHECK = 257,
 	};
 
 	const struct option options[] = {
