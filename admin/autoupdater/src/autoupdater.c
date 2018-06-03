@@ -86,6 +86,7 @@ static void usage(void) {
 		"                       really flash a new firmware if one is available.\n\n"
 		"  --fallback           Upgrade if and only if the upgrade timespan of the new\n"
 		"                       version has passed for at least 24 hours.\n\n"
+		"  --force-version      Skip version check to allow downgrades.\n\n"
 		"  <mirror> ...         Override the mirror URLs given in the configuration. If\n"
 		"                       specified, these are not shuffled.\n\n",
 		stderr
@@ -100,6 +101,7 @@ static void parse_args(int argc, char *argv[], struct settings *settings) {
 		OPTION_HELP = 'h',
 		OPTION_NO_ACTION = 'n',
 		OPTION_FALLBACK = 256,
+		OPTION_FORCE_VERSION = 257,
 	};
 
 	const struct option options[] = {
@@ -107,6 +109,7 @@ static void parse_args(int argc, char *argv[], struct settings *settings) {
 		{"force",     no_argument,       NULL, OPTION_FORCE},
 		{"fallback",  no_argument,       NULL, OPTION_FALLBACK},
 		{"no-action", no_argument,       NULL, OPTION_NO_ACTION},
+		{"force-version", no_argument, NULL, OPTION_FORCE_VERSION},
 		{"help",      no_argument,       NULL, OPTION_HELP},
 	};
 
@@ -134,6 +137,10 @@ static void parse_args(int argc, char *argv[], struct settings *settings) {
 
 		case OPTION_NO_ACTION:
 			settings->no_action = true;
+			break;
+
+		case OPTION_FORCE_VERSION:
+			settings->force_version = true;
 			break;
 
 		default:
@@ -321,7 +328,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	}
 
 	/* Check version and update probability */
-	if (!newer_than(m->version, s->old_version)) {
+	if (!newer_than(m->version, s->old_version) && !s->force_version) {
 		puts("No new firmware available.");
 		ret = true;
 		goto out;
