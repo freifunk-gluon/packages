@@ -116,7 +116,10 @@ static int survey_airtime_handler(struct nl_msg *msg, void *arg) {
 				data_json = json_object_new_int(nla_get_u32(nla));
 				break;
 			case sizeof(uint8_t):
-				data_json = json_object_new_int(nla_get_u8(nla));
+				if (type == NL80211_SURVEY_INFO_NOISE)
+					data_json = json_object_new_int((int8_t)nla_get_u8(nla));
+				else
+					data_json = json_object_new_int(nla_get_u8(nla));
 				break;
 			default:
 				fprintf(stderr, "respondd-module-airtime: Unexpected NL attribute length: %d\n", nla_len(nla));
