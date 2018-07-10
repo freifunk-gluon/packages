@@ -6,7 +6,7 @@ CFLAGS += -Iinclude
 CFLAGS += -Wall
 
 EXT_TABLES:=filter nat broute
-EXT_FUNC:=arp ip6 ip limit mark mark_m standard
+EXT_FUNC:=arp ip6 ip limit mark mark_m nat standard
 EXT_OBJS:=$(foreach T,$(EXT_FUNC),extensions/ebt_$(T).o) $(foreach T,$(EXT_TABLES),extensions/ebtable_$(T).o)
 
 OBJECTS2:=getethertype.o communication.o libebtc.o useful_functions.o ebtables.o
