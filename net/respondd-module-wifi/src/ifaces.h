@@ -1,8 +1,10 @@
 #pragma once
 
 struct iface_list {
-	int ifx;
 	int wiphy;
+	int ifx;
+	int frequency;
+	int txpower;
 	struct iface_list *next;
 };
 

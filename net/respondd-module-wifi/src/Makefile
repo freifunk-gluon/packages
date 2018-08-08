@@ -9,7 +9,7 @@ all: respondd.so
 
 %.c: %.h
 
-respondd.so: netlink.c airtime.c ifaces.c respondd.c
+respondd.so: netlink.c clients.c airtime.c ifaces.c respondd.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -shared -fPIC -D_GNU_SOURCE -lnl-tiny -o $@ $^ $(LDLIBS)
 
 clean:

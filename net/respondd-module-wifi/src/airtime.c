@@ -57,8 +57,7 @@
  * @__NL80211_SURVEY_INFO_AFTER_LAST: internal use
  */
 
-static const char const* msg_names[NL80211_SURVEY_INFO_MAX + 1] = {
-	[NL80211_SURVEY_INFO_FREQUENCY] = "frequency",
+static const char * msg_names[NL80211_SURVEY_INFO_MAX + 1] = {
 	[NL80211_SURVEY_INFO_CHANNEL_TIME] = "active",
 	[NL80211_SURVEY_INFO_CHANNEL_TIME_BUSY] = "busy",
 	[NL80211_SURVEY_INFO_CHANNEL_TIME_RX] = "rx",
@@ -67,19 +66,13 @@ static const char const* msg_names[NL80211_SURVEY_INFO_MAX + 1] = {
 };
 
 static int survey_airtime_handler(struct nl_msg *msg, void *arg) {
-	struct json_object *parent_json = (struct json_object *) arg;
+	struct json_object *json = (struct json_object *) arg;
 
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 	struct nlattr *survey_info = nla_find(genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NL80211_ATTR_SURVEY_INFO);
 
 	if (!survey_info) {
-		fprintf(stderr, "respondd-module-airtime: survey data missing in netlink message\n");
-		goto abort;
-	}
-
-	struct json_object *freq_json = json_object_new_object();
-	if (!freq_json) {
-		fprintf(stderr, "respondd-module-airtime: failed allocating JSON object\n");
+		fputs("respondd-module-wifi: survey data missing in netlink message\n", stderr);
 		goto abort;
 	}
 
@@ -99,7 +92,6 @@ static int survey_airtime_handler(struct nl_msg *msg, void *arg) {
 		switch (type) {
 			// these are the required fields
 			case NL80211_SURVEY_INFO_IN_USE:
-			case NL80211_SURVEY_INFO_FREQUENCY:
 			case NL80211_SURVEY_INFO_CHANNEL_TIME:
 				req_fields++;
 		}
@@ -122,17 +114,12 @@ static int survey_airtime_handler(struct nl_msg *msg, void *arg) {
 					data_json = json_object_new_int(nla_get_u8(nla));
 				break;
 			default:
-				fprintf(stderr, "respondd-module-airtime: Unexpected NL attribute length: %d\n", nla_len(nla));
+				fprintf(stderr, "respondd-module-wifi: Unexpected NL attribute length: %d\n", nla_len(nla));
 		}
 
 		if (data_json)
-			json_object_object_add(freq_json, msg_names[type], data_json);
+			json_object_object_add(json, msg_names[type], data_json);
 	}
-
-	if (req_fields == 3)
-		json_object_array_add(parent_json, freq_json);
-	else
-		json_object_put(freq_json);
 
 abort:
 	return NL_SKIP;

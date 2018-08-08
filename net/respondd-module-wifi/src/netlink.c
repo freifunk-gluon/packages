@@ -6,6 +6,7 @@
 
 #include "netlink.h"
 
+
 bool nl_send_dump(nl_recvmsg_msg_cb_t cb, void *cb_arg, int cmd, uint32_t cmd_arg) {
 	bool ok = false;
 	int ret;
@@ -14,7 +15,7 @@ bool nl_send_dump(nl_recvmsg_msg_cb_t cb, void *cb_arg, int cmd, uint32_t cmd_ar
 	struct nl_msg *msg = NULL;
 
 
-#define ERR(...) { fprintf(stderr, "respondd-module-airtime: " __VA_ARGS__); goto out; }
+#define ERR(...) { fprintf(stderr, "respondd-module-wifi: " __VA_ARGS__); goto out; }
 
 	sk = nl_socket_alloc();
 	if (!sk)
