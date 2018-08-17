@@ -11,6 +11,7 @@ The format is the following:
     "wireless": [
       {
         "frequency": 5220,
+        "channel_width": 40,
         "txpower": 1700,
         "active": 366561161,
         "busy": 46496566,
@@ -21,6 +22,7 @@ The format is the following:
       },
       {
         "frequency": 5220,
+        "channel_width": 40,
         "txpower": 1700,
         "active": 366561161,
         "busy": 46496566,
@@ -31,6 +33,7 @@ The format is the following:
       },
       {
         "frequency": 2437,
+        "channel_width": 20,
         "txpower": 2000,
         "active": 366649704,
         "busy": 205221222,
@@ -40,6 +43,19 @@ The format is the following:
         "clients": 3
       }
     ]
+  },
+  "neighbours": {
+    "wifi":{
+      "00:11:22:33:44:55:66":{
+        "frequency": 5220,
+        "neighbours":{
+          "33:22:33:11:22:44":{
+            "signal": 191,
+            "inactive": 50
+          }
+        }
+      }
+    }
   }
 }
 ```

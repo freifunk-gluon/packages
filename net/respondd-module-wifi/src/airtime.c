@@ -57,7 +57,7 @@
  * @__NL80211_SURVEY_INFO_AFTER_LAST: internal use
  */
 
-static const char * msg_names[NL80211_SURVEY_INFO_MAX + 1] = {
+static const char * airtime_names[NL80211_SURVEY_INFO_MAX + 1] = {
 	[NL80211_SURVEY_INFO_CHANNEL_TIME] = "active",
 	[NL80211_SURVEY_INFO_CHANNEL_TIME_BUSY] = "busy",
 	[NL80211_SURVEY_INFO_CHANNEL_TIME_RX] = "rx",
@@ -79,7 +79,6 @@ static int survey_airtime_handler(struct nl_msg *msg, void *arg) {
 	// This variable counts the number of required attributes that are
 	// found in the message and is afterwards checked against the number of
 	// required attributes.
-	unsigned int req_fields = 0;
 
 	int rem;
 	struct nlattr *nla;
@@ -89,14 +88,7 @@ static int survey_airtime_handler(struct nl_msg *msg, void *arg) {
 		if (type > NL80211_SURVEY_INFO_MAX)
 			continue;
 
-		switch (type) {
-			// these are the required fields
-			case NL80211_SURVEY_INFO_IN_USE:
-			case NL80211_SURVEY_INFO_CHANNEL_TIME:
-				req_fields++;
-		}
-
-		if (!msg_names[type])
+		if (!airtime_names[type])
 			continue;
 
 		struct json_object *data_json = NULL;
@@ -118,7 +110,7 @@ static int survey_airtime_handler(struct nl_msg *msg, void *arg) {
 		}
 
 		if (data_json)
-			json_object_object_add(json, msg_names[type], data_json);
+			json_object_object_add(json, airtime_names[type], data_json);
 	}
 
 abort:

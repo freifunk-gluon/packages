@@ -1,10 +1,27 @@
 #include <inttypes.h>
 
 #include <linux/nl80211.h>
+#include <linux/if_ether.h>
 #include <netlink/genl/genl.h>
 #include <netlink/genl/ctrl.h>
 
 #include "netlink.h"
+
+
+void mac_addr_n2a(char *mac_addr, unsigned char *arg) {
+	int i, l;
+
+	l = 0;
+	for (i = 0; i < ETH_ALEN ; i++) {
+		if (i == 0) {
+			sprintf(mac_addr+l, "%02x", arg[i]);
+			l += 2;
+		} else {
+			sprintf(mac_addr+l, ":%02x", arg[i]);
+			l += 3;
+		}
+	}
+}
 
 
 bool nl_send_dump(nl_recvmsg_msg_cb_t cb, void *cb_arg, int cmd, uint32_t cmd_arg) {
