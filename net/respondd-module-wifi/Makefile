@@ -37,3 +37,4 @@ endef
 Package/respondd-module-gluonwifi/install = $(Package/respondd-module-wifi/install)
 
 $(eval $(call BuildPackage,respondd-module-wifi))
+$(eval $(call BuildPackage,respondd-module-gluonwifi))
