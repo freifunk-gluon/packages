@@ -352,6 +352,16 @@ static struct json_object * eval_providers(struct provider_list *providers) {
 	return ret;
 }
 
+/**
+ * Find all providers for the type and return the (eventually cached) result
+ *
+ * Either the request can be answered from cache or eval_providers() is called
+ * to get fresh results.
+ *
+ * @type: String containing the query type
+ *
+ * Returns: Result for the query as json object
+ */
 static struct json_object * single_request(char *type) {
 	ENTRY key = {
 		.key = type,
@@ -379,6 +389,13 @@ static struct json_object * single_request(char *type) {
 	return ret;
 }
 
+/**
+ * Calls single_request() for each query type and merges the results
+ *
+ * @types: String with space seperated list of types. E.g. "type1 type2"
+ *
+ * Returns: The json structure is { "type1": {...}, "type2": {...} }
+ */
 static struct json_object * multi_request(char *types) {
 	struct json_object *ret = json_object_new_object();
 	char *type, *saveptr;
@@ -392,6 +409,17 @@ static struct json_object * multi_request(char *types) {
 	return ret;
 }
 
+/**
+ * Calls multi_request() or single_request() depending on the request type
+ *
+ * @request: Request string. Two patterns are possible:
+ *           - "type" (single request)
+ *           - "GET type1 type2 ..." (multi request)
+ * @compress: Responses to multi requests should be compressed afterwards by
+ *            the calling function, this will be saved in *compress.
+ *
+ * Returns: The uncompressed json result ready to be (compressed and) sent
+ */
 static struct json_object * handle_request(char *request, bool *compress) {
 	if (!*request)
 		return NULL;
@@ -406,6 +434,14 @@ static struct json_object * handle_request(char *request, bool *compress) {
 	}
 }
 
+/**
+ * Eventually compress and send response the response on the udp socket
+ *
+ * @sock: Socket filedescriptor of the udp socket
+ * @result: Result json object to be send
+ * @compress: True, if the answer should be compressed before sending
+ * @addr: Ipv6 destination address for the answer
+ */
 void send_response(int sock, struct json_object *result, bool compress,
                    struct sockaddr_in6 *addr) {
 	const char *output = NULL;
@@ -437,6 +473,14 @@ void send_response(int sock, struct json_object *result, bool compress,
 	json_object_put(result);
 }
 
+/**
+ * Handle the request task and the send response
+ *
+ * Calls handle_request() and if successful send_response() afterwards.
+ *
+ * @task: The task object (including the request query and the response address)
+ *        for the task.
+ */
 void serve_request(struct request_task *task, int sock) {
 	bool compress;
 	struct json_object *result = handle_request(task->request, &compress);
