@@ -9,18 +9,7 @@
 
 
 void mac_addr_n2a(char *mac_addr, unsigned char *arg) {
-	int i, l;
-
-	l = 0;
-	for (i = 0; i < ETH_ALEN ; i++) {
-		if (i == 0) {
-			sprintf(mac_addr+l, "%02x", arg[i]);
-			l += 2;
-		} else {
-			sprintf(mac_addr+l, ":%02x", arg[i]);
-			l += 3;
-		}
-	}
+	sprintf(mac_addr, "%02x:%02x:%02x:%02x:%02x:%02x", arg[0], arg[1], arg[2], arg[3], arg[4], arg[5]);
 }
 
 
