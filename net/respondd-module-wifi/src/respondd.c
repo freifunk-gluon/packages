@@ -21,12 +21,14 @@ static struct json_object *respondd_provider_statistics(void) {
 
 	wireless = json_object_new_array();
 	if (!wireless) {
-		//TODO why needed? : json_object_put(result);
+		json_object_put(result);
 		return NULL;
 	}
 
 	clients = json_object_new_object();
 	if (!clients) {
+		json_object_put(wireless);
+		json_object_put(result);
 		return NULL;
 	}
 
@@ -83,7 +85,7 @@ static struct json_object *respondd_provider_neighbours(void) {
 
 	wireless = json_object_new_object();
 	if (!wireless) {
-		//TODO why needed? : json_object_put(result);
+		json_object_put(result);
 		return NULL;
 	}
 
@@ -98,8 +100,10 @@ static struct json_object *respondd_provider_neighbours(void) {
 		if (!station)
 			goto next_neighbours;
 
-		if (!get_neighbours(station, ifaces->ifx))
+		if (!get_neighbours(station, ifaces->ifx)) {
+			json_object_put(station);
 			goto next_neighbours;
+		}
 
 		if (ifaces->frequency)
 			json_object_object_add(station, "frequency", json_object_new_int(ifaces->frequency));

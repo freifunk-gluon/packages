@@ -13,10 +13,8 @@ static int station_neighbours_handler(struct nl_msg *msg, void *arg) {
 	struct json_object *neighbour, *json = (struct json_object *) arg;
 
 	neighbour = json_object_new_object();
-	if (!neighbour) {
-		//TODO why needed? : json_object_put(result);
+	if (!neighbour)
 		goto abort;
-	}
 
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
 
@@ -27,13 +25,16 @@ static int station_neighbours_handler(struct nl_msg *msg, void *arg) {
 
 	if (!station_info) {
 		fputs("respondd-module-wifi: station data missing in netlink message\n", stderr);
+		json_object_put(neighbour);
 		goto abort;
 	}
 
 	char mac_addr[20];
 
-	if (!tb[NL80211_ATTR_MAC])
+	if (!tb[NL80211_ATTR_MAC]) {
+		json_object_put(neighbour);
 		goto abort;
+	}
 	mac_addr_n2a(mac_addr, nla_data(tb[NL80211_ATTR_MAC]));
 
 	int rem;
@@ -75,8 +76,10 @@ bool get_neighbours(struct json_object *result, int ifx) {
 	neighbours = json_object_new_object();
 	if (!neighbours)
 		return false;
-  if(!nl_send_dump(station_neighbours_handler, neighbours, NL80211_CMD_GET_STATION, ifx))
+  if(!nl_send_dump(station_neighbours_handler, neighbours, NL80211_CMD_GET_STATION, ifx)) {
+		json_object_put(neighbours);
 		return false;
+	}
 	json_object_object_add(result, "neighbours", neighbours);
 	return true;
 
