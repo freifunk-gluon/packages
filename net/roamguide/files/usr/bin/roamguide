@@ -1,12 +1,12 @@
 #!/bin/sh
 
-. /lib/functions.
+. /lib/functions.sh
 
-LOCK="/tmp/ide.lock"
+LOCK="/tmp/roamguide.lock"
 
 try_lock(){
   mkdir "$LOCK" || echo "Already running!"
-  trap "ir $LOCK" EXIT
+  trap "rm $LOCK" EXIT
 }
 
 wifi_kick(){
