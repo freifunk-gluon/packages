@@ -1,17 +1,16 @@
-#!/bin/sh /etc/rc.common
+#!/bin/sh
 
-. $IPKG_INSTROOT/lib/functions/network.sh
-
-START=90
+. /lib/functions.sh
+. /lib/functions/network.sh
 
 PIDPATH=/var/run
 tunnel_id=0
 
 missing() {
-	echo "Not starting tunneldigger \"$1\" - missing $2" >&2
+	logger -t td-client "Not starting tunneldigger \"$1\" - missing $2" >&2
 }
 
-handle_td() {
+handle_td_ifup() {
 	local cfg=$1
 	local enabled
 	local addresses
@@ -22,6 +21,7 @@ handle_td() {
 	local hook_script
 	local bind_interface
 	local broker_selection
+
 
 	config_get_bool enabled "$cfg" enabled 1
 	config_get addresses "$cfg" address
@@ -36,8 +36,8 @@ handle_td() {
 	let tunnel_id++
 
 	[ $enabled -eq 0 ] && return
-	# The hotplug script will take care of tunnels bound to an interface
-	[ ! -z "${bind_interface}" ] && return
+
+	[ "$INTERFACE" != "${bind_interface}" ] && return
 
 	local broker_opts=""
 	local address
@@ -47,6 +47,12 @@ handle_td() {
 
 	[ ! -z "${limit_bw_down}" ] && append broker_opts "-L ${limit_bw_down}"
 	[ ! -z "${hook_script}" ] && append broker_opts "-s ${hook_script}"
+	[ ! -z "${bind_interface}" ] && {
+		# Resolve logical interface name.
+		unset _bind_interface
+		network_get_device _bind_interface "${bind_interface}" || _bind_interface="${bind_interface}"
+		append broker_opts "-I ${_bind_interface}"
+	}
 	[ ! -z "${broker_selection}" ] && {
 		# Set broker selection.
 		case "${broker_selection}" in
@@ -70,31 +76,39 @@ handle_td() {
 		return
 	fi
 
-	echo "Starting tunneldigger \"$cfg\" on ${interface}"
+	logger -t td-client "Starting tunneldigger \"$cfg\" on ${interface}"
 	/sbin/start-stop-daemon -S -q -b -m -c root:${group} -p ${PIDPATH}/tunneldigger.${interface}.pid -x /usr/bin/tunneldigger -- -u ${uuid} -i ${interface} -t ${tunnel_id} ${broker_opts}
 }
 
-start() {
-	config_load tunneldigger
-	config_foreach handle_td broker
-}
+handle_td_ifdown() {
+	local cfg=$1
+	local enabled
+	local interface
+	local bind_interface
 
-stop() {
-	for PIDFILE in `find ${PIDPATH}/ -name "tunneldigger\.*\.pid"`; do
-		PID="$(cat ${PIDFILE})"
-		IFACE="$(echo ${PIDFILE} | awk -F\/tunneldigger '{print $2}' | cut -d'.' -f2)"
-		echo "Stopping tunneldigger for interface ${IFACE}"
-		start-stop-daemon -K -q -p $PIDFILE 
+	config_get_bool enabled "$cfg" enabled 1
+	config_get interface "$cfg" interface
+	config_get bind_interface "$cfg" bind_interface
+
+	if [ "$INTERFACE" = "${bind_interface}" ]; then
+		local PIDFILE=${PIDPATH}/tunneldigger.${interface}.pid
+		local PID="$(cat ${PIDFILE})"
+		logger -t td-client "Stopping tunneldigger \"$cfg\" on ${interface} PIDFILE=${PIDFILE}"
+		/sbin/start-stop-daemon -K -q -p $PIDFILE
 		while test -d "/proc/${PID}"; do
-			echo "  waiting for tunneldigger to stop"
+			logger -t td-client "  waiting for tunneldigger to stop"
 			sleep 1
 		done
-		echo "  tunneldigger stopped"
-	done
+		logger -t td-client "  tunneldigger stopped"
+	fi
 }
 
-restart() {
-	stop
-	start
-}
+config_load tunneldigger
+if [ "$ACTION" = ifup ]; then
+	config_foreach handle_td_ifup broker
+fi
+
+if [ "$ACTION" = ifdown ]; then
+	config_foreach handle_td_ifdown broker
+fi
 

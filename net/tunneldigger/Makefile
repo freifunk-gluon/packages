@@ -33,6 +33,8 @@ define Package/tunneldigger/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/tunneldigger $(1)/usr/bin/tunneldigger
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/tunneldigger.init $(1)/etc/init.d/tunneldigger
+	$(INSTALL_DIR) $(1)/etc/hotplug.d/iface
+	$(INSTALL_BIN) ./files/tunneldigger.hotplug $(1)/etc/hotplug.d/iface/60-tunneldigger
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_DATA) ./files/config.default $(1)/etc/config/tunneldigger
 endef
