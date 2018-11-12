@@ -1,0 +1,33 @@
+menu "Configuration"
+	depends on PACKAGE_libplatforminfo
+
+config LIBPLATFORMINFO_CUSTOM
+	bool "Use custom definitions"
+	default n
+	help
+		Use custom definitions to get the platform informations
+		from special files.
+
+if LIBPLATFORMINFO_CUSTOM
+
+config LIBPLATFORMINFO_BOARD_NAME
+	string "File to board name information"
+	default "/tmp/sysinfo/board_name"
+	help
+		File to board name information
+
+config LIBPLATFORMINFO_MODEL
+	string "File to model information"
+	default "/tmp/sysinfo/model"
+	help
+		File to model information
+
+config LIBPLATFORMINFO_IMAGE_NAME
+	string "File to image name information"
+	default ""
+	help
+		File to image name information
+
+endif # if LIBPLATFORMINFO_CUSTOM
+
+endmenu
