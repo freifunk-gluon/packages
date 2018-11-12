@@ -18,10 +18,21 @@ define Package/libplatforminfo
   TITLE:=Platform information library
 endef
 
+define Package/libplatforminfo/config
+	source "$(SOURCE)/Config.in"
+endef
+
 CMAKE_OPTIONS += \
 	-DTARGET:STRING="$(BOARD)" \
 	-DSUBTARGET:STRING="$(SUBTARGET)"
 
+ifeq ($(CONFIG_LIBPLATFORMINFO_CUSTOM),y)
+	CMAKE_OPTIONS += \
+		-DCUSTOM:BOOL=ON \
+		-DBOARD_NAME:STRING=$(CONFIG_LIBPLATFORMINFO_BOARD_NAME) \
+		-DMODEL:STRING=$(CONFIG_LIBPLATFORMINFO_MODEL) \
+		-DIMAGE_NAME:STRING=$(CONFIG_LIBPLATFORMINFO_IMAGE_NAME)
+endif
 
 define Package/libplatforminfo/install
 	$(INSTALL_DIR) $(1)/usr/lib
