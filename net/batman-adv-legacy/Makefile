@@ -19,7 +19,7 @@ BATCTL_MD5SUM:=42e269cc710bbc9a8fd17628201d4258
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=git://github.com/freifunk-gluon/batman-adv-legacy.git
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=7b775e93b7d2d3f10b137e76090c82a06af65272
+PKG_SOURCE_VERSION:=f18bcec07bc22382968d148afcdaa48b2aa0eb73
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
 BATCTL_SOURCE_URL:=http://downloads.open-mesh.org/batman/releases/batman-adv-$(BATCTL_VERSION)
@@ -34,9 +34,9 @@ define KernelPackage/batman-adv-legacy
   MAINTAINER:=Marek Lindner <lindner_marek@yahoo.de>
   SUBMENU:=Network Support
   DEPENDS:=+kmod-lib-crc16 +kmod-crypto-crc32c +kmod-lib-crc32c +libc
-  TITLE:=B.A.T.M.A.N. Adv
-  FILES:=$(PKG_BUILD_DIR)/batman-adv.$(LINUX_KMOD_SUFFIX)
-  AUTOLOAD:=$(call AutoLoad,50,batman-adv)
+  TITLE:=B.A.T.M.A.N. Adv Legacy
+  FILES:=$(PKG_BUILD_DIR)/batman-adv-legacy.$(LINUX_KMOD_SUFFIX)
+  AUTOLOAD:=$(call AutoLoad,50,batman-adv-legacy)
 endef
 
 define KernelPackage/batman-adv-legacy/description
@@ -56,6 +56,8 @@ MAKE_BATMAN_ADV_ARGS += \
 	SUBDIRS="$(PKG_BUILD_DIR)" \
 	PWD="$(PKG_BUILD_DIR)" \
 	LINUX_VERSION="$(LINUX_VERSION)" \
+	OBJDUMP="$(TARGET_CROSS)objdump" \
+	OBJCOPY="$(TARGET_CROSS)objcopy" \
 	CONFIG_BATMAN_ADV_DEBUG=$(if $(CONFIG_KMOD_BATMAN_ADV_LEGACY_DEBUG_LOG),y,n) \
 	CONFIG_BATMAN_ADV_BLA=$(if $(CONFIG_KMOD_BATMAN_ADV_LEGACY_BLA),y,n) \
 	CONFIG_BATMAN_ADV_DAT=$(if $(CONFIG_KMOD_BATMAN_ADV_LEGACY_DAT),y,n) \
@@ -98,7 +100,7 @@ $(eval $(call Download,batctl-legacy))
 BATCTL_EXTRACT = tar xzf "$(DL_DIR)/batctl-$(BATCTL_VERSION).tar.gz" -C "$(PKG_BUILD_DIR)"
 BATCTL_PATCH = $(call Build/DoPatch,"$(PKG_BATCTL_BUILD_DIR)","$(PATCH_DIR)",batctl)
 BATCTL_BUILD = $(MAKE_BATCTL_ENV) $(MAKE) -C $(PKG_BATCTL_BUILD_DIR) $(MAKE_BATCTL_ARGS)
-BATCTL_INSTALL = $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/local/sbin/batctl $(1)/usr/sbin/
+BATCTL_INSTALL = $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/local/sbin/batctl-legacy $(1)/usr/sbin/
 endif
 
 KPATCH ?= $(PATCH)
@@ -129,11 +131,11 @@ define Build/Compile
 endef
 
 define KernelPackage/batman-adv-legacy/install
-	$(INSTALL_DIR) $(1)/etc/config $(1)/etc/hotplug.d/net $(1)/etc/hotplug.d/iface $(1)/lib/batman-adv $(1)/usr/sbin $(1)/lib/netifd/proto
-	$(INSTALL_DATA) ./files/etc/config/batman-adv $(1)/etc/config
-	$(INSTALL_DATA) ./files/lib/batman-adv/config.sh $(1)/lib/batman-adv
-	$(INSTALL_BIN) ./files/etc/hotplug.d/net/99-batman-adv $(1)/etc/hotplug.d/net
-	$(INSTALL_BIN) ./files/lib/netifd/proto/batadv.sh $(1)/lib/netifd/proto
+	$(INSTALL_DIR) $(1)/etc/config $(1)/etc/hotplug.d/net $(1)/etc/hotplug.d/iface $(1)/lib/batman-adv-legacy $(1)/usr/sbin $(1)/lib/netifd/proto
+	$(INSTALL_DATA) ./files/etc/config/batman-adv-legacy $(1)/etc/config
+	$(INSTALL_DATA) ./files/lib/batman-adv-legacy/config.sh $(1)/lib/batman-adv-legacy
+	$(INSTALL_BIN) ./files/etc/hotplug.d/net/99-batman-adv-legacy $(1)/etc/hotplug.d/net
+	$(INSTALL_BIN) ./files/lib/netifd/proto/batadv-legacy.sh $(1)/lib/netifd/proto
 	$(BATCTL_INSTALL)
 endef
 

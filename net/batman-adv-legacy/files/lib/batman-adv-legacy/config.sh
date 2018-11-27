@@ -2,10 +2,10 @@
 
 bat_load_module()
 {
-	[ -d "/sys/module/batman_adv/" ] && return
+	[ -d "/sys/module/batman_adv_legacy/" ] && return
 
 	. /lib/functions.sh
-	load_modules /etc/modules.d/*-crc16 /etc/modules.d/*-crypto* /etc/modules.d/*-lib-crc* /etc/modules.d/*-batman-adv*
+	load_modules /etc/modules.d/*-crc16 /etc/modules.d/*-crypto* /etc/modules.d/*-lib-crc* /etc/modules.d/*-batman-adv-legacy*
 }
 
 bat_config()
@@ -29,7 +29,7 @@ bat_config()
 	config_get orig_interval "$mesh" orig_interval
 	config_get vis_mode "$mesh" vis_mode
 
-	[ ! -f "/sys/class/net/$mesh/mesh/orig_interval" ] && echo "batman-adv mesh $mesh does not exist - check your interface configuration" && return 1
+	[ ! -f "/sys/class/net/$mesh/mesh/orig_interval" ] && echo "batman-adv-legacy mesh $mesh does not exist - check your interface configuration" && return 1
 
 	[ -n "$aggregate_ogms" ] && echo $aggregate_ogms > /sys/class/net/$mesh/mesh/aggregate_ogms
 	[ -n "$ap_isolation" ] && echo $ap_isolation > /sys/class/net/$mesh/mesh/ap_isolation
