@@ -1,0 +1,88 @@
+From 11ebbde59b22738af096d9571a8afe4b1247ff0f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Linus=20L=C3=BCssing?= <linus.luessing@c0d3.blue>
+Date: Fri, 23 Nov 2018 01:40:09 +0100
+Subject: [PATCH 6/7] batctl: Change sysfs and debugfs directories to
+ batman_adv_legacy
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Linus Lüssing <linus.luessing@c0d3.blue>
+---
+ README  | 2 +-
+ debug.h | 2 +-
+ main.c  | 2 +-
+ main.h  | 2 +-
+ sys.h   | 4 ++--
+ 5 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/README b/README
+index fd421e1..cde089f 100644
+--- a/README
++++ b/README
+@@ -18,7 +18,7 @@ settings.
+ How does it work ?
+ ==================
+ 
+-batctl uses the debugfs/batman_adv/bat0/socket device provided by the B.A.T.M.A.N.
++batctl uses the debugfs/batman_adv_legacy/bat0/socket device provided by the B.A.T.M.A.N.
+ advanced kernel module to inject custom icmp packets into the data flow. That's why
+ ping and traceroute work almost like their IP based counterparts. Tcpdump was
+ designed because B.A.T.M.A.N. advanced encapsulates all traffic within batman
+diff --git a/debug.h b/debug.h
+index 2427ece..13757d7 100644
+--- a/debug.h
++++ b/debug.h
+@@ -20,7 +20,7 @@
+  */
+ 
+ 
+-#define DEBUG_BATIF_PATH_FMT "%s/batman_adv/%s"
++#define DEBUG_BATIF_PATH_FMT "%s/batman_adv_legacy/%s"
+ #define DEBUG_VIS_DATA "vis_data"
+ #define DEBUG_TRANSTABLE_GLOBAL "transtable_global"
+ #define DEBUG_LOG "log"
+diff --git a/main.c b/main.c
+index 7d667d3..daa96a5 100644
+--- a/main.c
++++ b/main.c
+@@ -42,7 +42,7 @@
+ #include <err.h>
+ 
+ char mesh_dfl_iface[] = "bat0";
+-char module_ver_path[] = "/sys/module/batman_adv/version";
++char module_ver_path[] = "/sys/module/batman_adv_legacy/version";
+ 
+ void print_usage(void)
+ {
+diff --git a/main.h b/main.h
+index b8fd0c4..17f03c5 100644
+--- a/main.h
++++ b/main.h
+@@ -23,7 +23,7 @@
+ #define SOURCE_VERSION "2013.4.0"
+ #endif
+ 
+-#define SOCKET_PATH_FMT "%s/batman_adv/%s/socket"
++#define SOCKET_PATH_FMT "%s/batman_adv_legacy/%s/socket"
+ 
+ #define EXIT_NOSUCCESS 2
+ 
+diff --git a/sys.h b/sys.h
+index a7187af..7aa65bf 100644
+--- a/sys.h
++++ b/sys.h
+@@ -28,8 +28,8 @@
+ #define SYS_GW_BW "gw_bandwidth"
+ #define SYS_IFACE_PATH "/sys/class/net"
+ #define SYS_IFACE_DIR SYS_IFACE_PATH"/%s/"
+-#define SYS_MESH_IFACE_FMT SYS_IFACE_PATH"/%s/batman_adv/mesh_iface"
+-#define SYS_IFACE_STATUS_FMT SYS_IFACE_PATH"/%s/batman_adv/iface_status"
++#define SYS_MESH_IFACE_FMT SYS_IFACE_PATH"/%s/batman_adv_legacy/mesh_iface"
++#define SYS_IFACE_STATUS_FMT SYS_IFACE_PATH"/%s/batman_adv_legacy/iface_status"
+ 
+ enum batctl_settings_list {
+ 	BATCTL_SETTINGS_ORIG_INTERVAL,
+-- 
+2.11.0
+

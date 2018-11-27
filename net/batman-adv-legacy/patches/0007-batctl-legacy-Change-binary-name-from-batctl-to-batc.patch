@@ -1,0 +1,30 @@
+From 40442c335af9ae94adddc1c77b1500e12387289a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Linus=20L=C3=BCssing?= <linus.luessing@c0d3.blue>
+Date: Fri, 23 Nov 2018 01:52:39 +0100
+Subject: [PATCH 7/7] batctl-legacy: Change binary name from batctl to
+ batctl-legacy
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Linus Lüssing <linus.luessing@c0d3.blue>
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 9e7c5be..8c7a211 100755
+--- a/Makefile
++++ b/Makefile
+@@ -23,7 +23,7 @@
+ export CONFIG_BATCTL_BISECT=n
+ 
+ # batctl build
+-BINARY_NAME = batctl
++BINARY_NAME = batctl-legacy
+ OBJ = main.o bat-hosts.o functions.o sys.o debug.o ping.o traceroute.o tcpdump.o  hash.o vis.o debugfs.o ioctl.o list-batman.o translate.o
+ OBJ_BISECT = bisect_iv.o
+ MANPAGE = man/batctl.8
+-- 
+2.11.0
+

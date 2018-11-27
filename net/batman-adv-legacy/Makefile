@@ -87,7 +87,7 @@ MAKE_BATCTL_ARGS += \
 	REVISION="" \
 	CC="$(TARGET_CC)" \
 	DESTDIR="$(PKG_INSTALL_DIR)" \
-	batctl install
+	batctl-legacy install
 
 ifneq ($(DEVELOPER)$(CONFIG_KMOD_BATMAN_ADV_LEGACY_BATCTL),)
 define Download/batctl-legacy
