@@ -7,6 +7,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 set(TARGET "" CACHE STRING "OpenWrt target")
 set(SUBTARGET "" CACHE STRING "OpenWrt subtarget")
+set(CUSTOM OFF CACHE BOOL "Use custom file definitions")
 
 add_definitions(-DTARGET=${TARGET})
 
@@ -20,13 +21,20 @@ else(SUBTARGET)
   add_definitions(-DTARGET_${TARGET})
 endif(SUBTARGET)
 
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/targets/${FULL_TARGET}.c")
-  set(TARGET_SOURCE "targets/${FULL_TARGET}.c")
-elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/targets/${TARGET}.c")
-  set(TARGET_SOURCE "targets/${TARGET}.c")
-else()
-  set(TARGET_SOURCE "targets/default.c")
-endif()
+if(CUSTOM)
+  set(TARGET_SOURCE "targets/custom.c")
+  add_definitions(-DBOARD_NAME=\"${BOARD_NAME}\")
+  add_definitions(-DMODEL=\"${MODEL}\")
+  add_definitions(-DIMAGE_NAME=\"${IMAGE_NAME}\")
+else(CUSTOM)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/targets/${FULL_TARGET}.c")
+    set(TARGET_SOURCE "targets/${FULL_TARGET}.c")
+  elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/targets/${TARGET}.c")
+    set(TARGET_SOURCE "targets/${TARGET}.c")
+  else()
+    set(TARGET_SOURCE "targets/default.c")
+  endif()
+endif(CUSTOM)
 
 
 add_library(platforminfo SHARED
