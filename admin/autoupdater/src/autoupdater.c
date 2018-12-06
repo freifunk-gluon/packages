@@ -84,6 +84,8 @@ static void usage(void) {
 		"  -h, --help           Show this help.\n\n"
 		"  -n, --no-action      Download and validate the manifest as usual, but do not\n"
 		"                       really flash a new firmware if one is available.\n\n"
+		"  -c, --check          Validate the manifest as usual, but do not\n"
+		"                       download a new firmware.\n\n"
 		"  --fallback           Upgrade if and only if the upgrade timespan of the new\n"
 		"                       version has passed for at least 24 hours.\n\n"
 		"  --force-version      Skip version check to allow downgrades.\n\n"
@@ -100,6 +102,7 @@ static void parse_args(int argc, char *argv[], struct settings *settings) {
 		OPTION_FORCE = 'f',
 		OPTION_HELP = 'h',
 		OPTION_NO_ACTION = 'n',
+		OPTION_CHECK = 'c',
 		OPTION_FALLBACK = 256,
 		OPTION_FORCE_VERSION = 257,
 	};
@@ -109,12 +112,13 @@ static void parse_args(int argc, char *argv[], struct settings *settings) {
 		{"force",     no_argument,       NULL, OPTION_FORCE},
 		{"fallback",  no_argument,       NULL, OPTION_FALLBACK},
 		{"no-action", no_argument,       NULL, OPTION_NO_ACTION},
+		{"check",      no_argument,      NULL, OPTION_CHECK},
 		{"force-version", no_argument, NULL, OPTION_FORCE_VERSION},
 		{"help",      no_argument,       NULL, OPTION_HELP},
 	};
 
 	while (true) {
-		int c = getopt_long(argc, argv, "b:fhn", options, NULL);
+		int c = getopt_long(argc, argv, "b:fhnc", options, NULL);
 		if (c < 0)
 			break;
 
@@ -137,6 +141,10 @@ static void parse_args(int argc, char *argv[], struct settings *settings) {
 
 		case OPTION_NO_ACTION:
 			settings->no_action = true;
+			break;
+
+		case OPTION_CHECK:
+			settings->check = true;
 			break;
 
 		case OPTION_FORCE_VERSION:
@@ -286,7 +294,8 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	sprintf(manifest_url, "%s/%s.manifest", mirror, s->branch);
 
 
-	printf("Retrieving manifest from %s ...\n", manifest_url);
+	if (!s->check)
+		printf("Retrieving manifest from %s ...\n", manifest_url);
 
 	/* Download manifest */
 	ecdsa_sha256_init(&m->hash_ctx);
@@ -330,6 +339,17 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	/* Check version and update probability */
 	if (!newer_than(m->version, s->old_version) && !s->force_version) {
 		puts("No new firmware available.");
+		ret = true;
+		goto out;
+	}
+
+	if (s->check) {
+		printf(
+			"VERSION=%s\n"
+			"SIZE=%u\n",
+			m->version,
+			m->imagesize
+		);
 		ret = true;
 		goto out;
 	}

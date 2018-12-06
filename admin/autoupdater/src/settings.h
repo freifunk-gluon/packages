@@ -33,6 +33,7 @@ struct settings {
 	bool force;
 	bool fallback;
 	bool no_action;
+	bool check;
 	bool force_version;
 	const char *branch;
 	unsigned long good_signatures;
