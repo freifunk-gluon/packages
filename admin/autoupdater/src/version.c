@@ -47,7 +47,7 @@ bool newer_than(const char *a, const char *b) {
 	if (b == NULL)
 		return true;
 
-	while (*a != '\0' && *b != '\0') {
+	while (*a != '\0' || *b != '\0') {
 		int first_diff = 0;
 
 		// compare non-digits character by character
