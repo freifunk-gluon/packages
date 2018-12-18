@@ -34,8 +34,10 @@ static int char_order(char c) {
 		return 0;
 	else if (isalpha(c))
 		return c;
-	else if (c == '~')
+	else if (c == '\0')
 		return -1;
+	else if (c == '~')
+		return -2;
 	else
 		return c + 256;
 }
