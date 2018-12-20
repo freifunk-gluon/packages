@@ -34,8 +34,10 @@ static int char_order(char c) {
 		return 0;
 	else if (isalpha(c))
 		return c;
-	else if (c == '~')
+	else if (c == '\0')
 		return -1;
+	else if (c == '~')
+		return -2;
 	else
 		return c + 256;
 }
@@ -47,7 +49,7 @@ bool newer_than(const char *a, const char *b) {
 	if (b == NULL)
 		return true;
 
-	while (*a != '\0' && *b != '\0') {
+	while (*a != '\0' || *b != '\0') {
 		int first_diff = 0;
 
 		// compare non-digits character by character
