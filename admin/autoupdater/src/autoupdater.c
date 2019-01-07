@@ -86,6 +86,7 @@ static void usage(void) {
 		"                       really flash a new firmware if one is available.\n\n"
 		"  --fallback           Upgrade if and only if the upgrade timespan of the new\n"
 		"                       version has passed for at least 24 hours.\n\n"
+		"  --force-signatures   Skip signature check.\n\n"
 		"  --force-version      Skip version check to allow downgrades.\n\n"
 		"  <mirror> ...         Override the mirror URLs given in the configuration. If\n"
 		"                       specified, these are not shuffled.\n\n",
@@ -102,6 +103,7 @@ static void parse_args(int argc, char *argv[], struct settings *settings) {
 		OPTION_NO_ACTION = 'n',
 		OPTION_FALLBACK = 256,
 		OPTION_FORCE_VERSION = 257,
+		OPTION_FORCE_SIGNATURES = 258,
 	};
 
 	const struct option options[] = {
@@ -110,6 +112,7 @@ static void parse_args(int argc, char *argv[], struct settings *settings) {
 		{"fallback",  no_argument,       NULL, OPTION_FALLBACK},
 		{"no-action", no_argument,       NULL, OPTION_NO_ACTION},
 		{"force-version", no_argument, NULL, OPTION_FORCE_VERSION},
+		{"force-signatures", no_argument, NULL, OPTION_FORCE_SIGNATURES},
 		{"help",      no_argument,       NULL, OPTION_HELP},
 	};
 
@@ -141,6 +144,10 @@ static void parse_args(int argc, char *argv[], struct settings *settings) {
 
 		case OPTION_FORCE_VERSION:
 			settings->force_version = true;
+			break;
+
+		case OPTION_FORCE_SIGNATURES:
+			settings->force_signatures = true;
 			break;
 
 		default:
@@ -305,7 +312,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 			ecdsa_verify_prepare_legacy(&ctxs[i], &hash, m->signatures[i]);
 
 		long unsigned int good_signatures = ecdsa_verify_list_legacy(ctxs, m->n_signatures, s->pubkeys, s->n_pubkeys);
-		if (good_signatures < s->good_signatures) {
+		if (good_signatures < s->good_signatures && !s->force_signatures) {
 			fprintf(stderr, "autoupdater: warning: manifest %s only carried %lu valid signatures, %lu are required\n", manifest_url, good_signatures, s->good_signatures);
 			goto out;
 		}

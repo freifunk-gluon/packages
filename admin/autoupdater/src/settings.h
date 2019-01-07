@@ -34,6 +34,7 @@ struct settings {
 	bool fallback;
 	bool no_action;
 	bool force_version;
+	bool force_signatures;
 	const char *branch;
 	unsigned long good_signatures;
 	char *old_version;
