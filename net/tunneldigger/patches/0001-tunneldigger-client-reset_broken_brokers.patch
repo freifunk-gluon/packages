@@ -25,15 +25,20 @@ index 16fdf3c..69ce54c 100644
 
      // Perform broker processing for 10 seconds or until all brokers are ready
      // (whichever is shorter); since all contexts are in standby mode, all
-@@ -1476,6 +1467,11 @@ int main(int argc, char **argv)
+@@ -1474,8 +1465,14 @@ int main(int argc, char **argv)
+
+     i = select_broker(brokers, broker_cnt, ready_cnt);
      if (i == -1) {
-       syslog(LOG_ERR, "No suitable brokers found. Retrying in 5 seconds");
+-      syslog(LOG_ERR, "No suitable brokers found. Retrying in 5 seconds");
++      syslog(LOG_ERR, "No suitable brokers found. Retrying in 5 seconds.");
        sleep(5);
 +      // Un-break all brokers.  There is no point in avoiding bad brokers if that means
 +      // we have no candidates left.
++      syslog(LOG_ERR, "Resetting status of brokers and starting from scratch.");
 +      for (i = 0; i < broker_cnt; i++) {
 +        brokers[i].broken = 0;
 +      }
        continue;
      }
+
 
