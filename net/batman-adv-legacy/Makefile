@@ -13,21 +13,14 @@ PKG_NAME:=batman-adv-legacy
 PKG_VERSION:=2018-06-03
 PKG_RELEASE:=1
 
-BATCTL_VERSION:=2013.4.0
-BATCTL_MD5SUM:=42e269cc710bbc9a8fd17628201d4258
-
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=git://github.com/freifunk-gluon/batman-adv-legacy.git
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 PKG_SOURCE_VERSION:=7b775e93b7d2d3f10b137e76090c82a06af65272
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
-BATCTL_SOURCE_URL:=http://downloads.open-mesh.org/batman/releases/batman-adv-$(BATCTL_VERSION)
-
 include $(INCLUDE_DIR)/kernel.mk
 include $(INCLUDE_DIR)/package.mk
-
-PKG_BATCTL_BUILD_DIR:=$(PKG_BUILD_DIR)/batctl-$(BATCTL_VERSION)
 
 define KernelPackage/batman-adv-legacy
   URL:=http://www.open-mesh.org/
@@ -48,7 +41,7 @@ define KernelPackage/batman-adv-legacy/config
 	source "$(SOURCE)/Config.in"
 endef
 
-MAKE_BATMAN_ADV_ARGS += \
+MAKE_FLAGS += \
 	CROSS_COMPILE="$(TARGET_CROSS)" \
 	KERNELPATH="$(LINUX_DIR)" \
 	ARCH="$(LINUX_KARCH)" \
@@ -62,79 +55,12 @@ MAKE_BATMAN_ADV_ARGS += \
 	CONFIG_BATMAN_ADV_NC=$(if $(CONFIG_KMOD_BATMAN_ADV_LEGACY_NC),y,n) \
 	REVISION="" all
 
-# The linker can identify unused sections of a binary when each symbol is stored
-# in a separate section. This mostly removes unused linker sections and reduces
-# the size by ~3% on mipsel.
-
-TARGET_CFLAGS  += -ffunction-sections -fdata-sections
-TARGET_LDFLAGS += -Wl,--gc-sections
-
-# Link-time optimization allows to move parts of the optimization from the single
-# source file to the global source view. This is done by emitting the GIMPLE
-# representation in each object file and analyzing it again during the link step.
-
-TARGET_CFLAGS  += -flto
-TARGET_LDFLAGS += -fuse-linker-plugin
-
-MAKE_BATCTL_ENV += \
-	CPPFLAGS="$(TARGET_CPPFLAGS)" \
-	CFLAGS="$(TARGET_CFLAGS)" \
-	LDFLAGS="$(TARGET_LDFLAGS)"
-
-MAKE_BATCTL_ARGS += \
-	REVISION="" \
-	CC="$(TARGET_CC)" \
-	DESTDIR="$(PKG_INSTALL_DIR)" \
-	batctl install
-
-ifneq ($(DEVELOPER)$(CONFIG_KMOD_BATMAN_ADV_LEGACY_BATCTL),)
-define Download/batctl-legacy
-  FILE:=batctl-$(BATCTL_VERSION).tar.gz
-  URL:=$(BATCTL_SOURCE_URL)
-  MD5SUM:=$(BATCTL_MD5SUM)
-endef
-$(eval $(call Download,batctl-legacy))
-
-BATCTL_EXTRACT = tar xzf "$(DL_DIR)/batctl-$(BATCTL_VERSION).tar.gz" -C "$(PKG_BUILD_DIR)"
-BATCTL_PATCH = $(call Build/DoPatch,"$(PKG_BATCTL_BUILD_DIR)","$(PATCH_DIR)",batctl)
-BATCTL_BUILD = $(MAKE_BATCTL_ENV) $(MAKE) -C $(PKG_BATCTL_BUILD_DIR) $(MAKE_BATCTL_ARGS)
-BATCTL_INSTALL = $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/local/sbin/batctl $(1)/usr/sbin/
-endif
-
-KPATCH ?= $(PATCH)
-define Build/DoPatch
-	@if [ -d "$(2)" ]; then \
-		if [ "$$$$(ls $(2) | grep -Ec ',*$(3).*')" -gt 0 ]; then \
-			$(KPATCH) "$(1)" "$(2)" "*$(3)*"; \
-		fi; \
-	fi
-endef
-
-define Build/Patch
-	$(call Build/DoPatch,"$(PKG_BUILD_DIR)","$(PATCH_DIR)",batman)
-	$(BATCTL_EXTRACT)
-	$(BATCTL_PATCH)
-endef
-
-define Build/Prepare
-	$(call Build/Prepare/Default)
-	$(SED) '/#define _NET_BATMAN_ADV_MAIN_H_/a\#undef CONFIG_MODULE_STRIPPED' \
-		$(PKG_BUILD_DIR)/main.h
-endef
-
-
-define Build/Compile
-	$(MAKE) -C "$(PKG_BUILD_DIR)" $(MAKE_BATMAN_ADV_ARGS)
-	$(BATCTL_BUILD)
-endef
-
 define KernelPackage/batman-adv-legacy/install
 	$(INSTALL_DIR) $(1)/etc/config $(1)/etc/hotplug.d/net $(1)/etc/hotplug.d/iface $(1)/lib/batman-adv $(1)/usr/sbin $(1)/lib/netifd/proto
 	$(INSTALL_DATA) ./files/etc/config/batman-adv $(1)/etc/config
 	$(INSTALL_DATA) ./files/lib/batman-adv/config.sh $(1)/lib/batman-adv
 	$(INSTALL_BIN) ./files/etc/hotplug.d/net/99-batman-adv $(1)/etc/hotplug.d/net
 	$(INSTALL_BIN) ./files/lib/netifd/proto/batadv.sh $(1)/lib/netifd/proto
-	$(BATCTL_INSTALL)
 endef
 
 $(eval $(call KernelPackage,batman-adv-legacy))
