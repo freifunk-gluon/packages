@@ -3,14 +3,12 @@
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
-#
-# $Id: Makefile 5624 2006-11-23 00:29:07Z nbd $
 
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=batman-adv-legacy
 
-PKG_VERSION:=2018-06-03
+PKG_VERSION:=2019-03-09
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
