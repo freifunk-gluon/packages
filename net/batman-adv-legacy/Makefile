@@ -55,6 +55,12 @@ MAKE_FLAGS += \
 	CONFIG_BATMAN_ADV_NC=$(if $(CONFIG_KMOD_BATMAN_ADV_LEGACY_NC),y,n) \
 	REVISION="" all
 
+define Build/Prepare
+	$(call Build/Prepare/Default)
+	$(SED) '/#define _NET_BATMAN_ADV_MAIN_H_/a\#undef CONFIG_MODULE_STRIPPED' \
+		$(PKG_BUILD_DIR)/main.h
+endef
+
 define KernelPackage/batman-adv-legacy/install
 	$(INSTALL_DIR) $(1)/etc/config $(1)/etc/hotplug.d/net $(1)/etc/hotplug.d/iface $(1)/lib/batman-adv $(1)/usr/sbin $(1)/lib/netifd/proto
 	$(INSTALL_DATA) ./files/etc/config/batman-adv $(1)/etc/config
