@@ -8,13 +8,13 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=batman-adv-legacy
 
-PKG_VERSION:=2019-03-09
+PKG_VERSION:=2019-04-22
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=git://github.com/freifunk-gluon/batman-adv-legacy.git
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=66fe8cba6be5291d52240e6f103cab8a4a92d87a
+PKG_SOURCE_VERSION:=ea42aed32284121e90857089cd741e237d34cdea
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
 include $(INCLUDE_DIR)/kernel.mk
