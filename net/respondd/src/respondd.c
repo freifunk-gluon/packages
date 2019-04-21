@@ -666,7 +666,7 @@ int main(int argc, char **argv) {
 
 		case 'g':
 			if (!inet_pton(AF_INET6, optarg, &mgroup_addr)) {
-				perror("Invalid multicast group. This message will probably confuse you");
+				fprintf(stderr, "Invalid multicast group address.\n");
 				exit(EXIT_FAILURE);
 			}
 
