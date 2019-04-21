@@ -57,11 +57,18 @@
 #define REQUEST_MAXLEN 256
 #define MAX_MULTICAST_DELAY_DEFAULT 0
 
-struct interface_delay_info {
-	struct interface_delay_info *next;
+struct interface_info {
+	struct interface_info *next;
 
 	unsigned int ifindex;
 	uint64_t max_multicast_delay;
+};
+
+struct group_info {
+	struct group_info *next;
+	struct in6_addr address;
+
+	struct interface_info *interfaces;
 };
 
 struct provider_list {
@@ -496,6 +503,22 @@ void serve_request(struct request_task *task, int sock) {
 	);
 }
 
+static const struct interface_info * find_multicast_interface(const struct group_info *groups, unsigned ifindex, const struct in6_addr *addr) {
+	for (const struct group_info *group = groups; group; group = group->next) {
+		if (memcmp(addr, &group->address, sizeof(struct in6_addr)) != 0)
+			continue;
+
+		for (const struct interface_info *iface = group->interfaces; iface; iface = iface->next) {
+			if (ifindex != iface->ifindex)
+				continue;
+
+			return iface;
+		}
+	}
+
+	return NULL;
+}
+
 /**
  * Wait for an incoming request and schedule it.
  *
@@ -515,7 +538,7 @@ void serve_request(struct request_task *task, int sock) {
  *     will be also sent immediately.
  */
 static void accept_request(struct request_schedule *schedule, int sock,
-                           struct interface_delay_info *if_delay_info_list) {
+                           const struct group_info *groups) {
 	char input[REQUEST_MAXLEN];
 	ssize_t input_bytes;
 	struct sockaddr_in6 addr;
@@ -580,30 +603,29 @@ static void accept_request(struct request_schedule *schedule, int sock,
 
 	input[input_bytes] = 0;
 
-	// get the max delay
-	uint64_t max_multicast_delay = MAX_MULTICAST_DELAY_DEFAULT;
-	struct interface_delay_info *tmp = if_delay_info_list;
-	for (; tmp; tmp = tmp->next) {
-		if (tmp->ifindex == ifindex) {
-			max_multicast_delay = tmp->max_multicast_delay;
-			break;
-		}
+	const struct interface_info *iface = NULL;
+	if (IN6_IS_ADDR_MULTICAST(&destaddr)) {
+		iface = find_multicast_interface(groups, ifindex, &destaddr);
+		// this should not happen
+		if (!iface)
+			return;
 	}
 
 	struct request_task *new_task = malloc(sizeof(*new_task));
-	// the ternary operator avoids division by 0
-	new_task->scheduled_time = max_multicast_delay ? now + rand() % max_multicast_delay : 0;
+	new_task->scheduled_time = 0;
 	strncpy(new_task->request, input, input_bytes + 1);
 	new_task->request[input_bytes] = 0;
 	new_task->client_addr = addr;
 
 	bool is_scheduled;
-	if(new_task->scheduled_time && IN6_IS_ADDR_MULTICAST(&destaddr))
+	if (iface) {
 		// scheduling could fail because the schedule is full
+		new_task->scheduled_time = now + rand() % iface->max_multicast_delay;
 		is_scheduled = schedule_push_request(schedule, new_task);
-	else
+	} else {
 		// unicast packets are always sent directly
 		is_scheduled = false;
+	}
 
 	if (!is_scheduled) {
 		// reply immediately
@@ -650,10 +672,7 @@ int main(int argc, char **argv) {
 	char *endptr;
 	opterr = 0;
 
-	int group_set = 0;
-	bool iface_set = false;
-	unsigned int last_ifindex = 0;
-	struct interface_delay_info *if_delay_info_list = NULL;
+	struct group_info *groups = NULL;
 
 	openlog("respondd", LOG_PID, LOG_DAEMON);
 
@@ -670,24 +689,34 @@ int main(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			}
 
-			group_set = 1;
+			struct group_info *new_group = malloc(sizeof(*new_group));
+			new_group->address = mgroup_addr;
+			new_group->interfaces = NULL;
+			new_group->next = groups;
+			groups = new_group;
 			break;
 
 		case 'i':
-			if (!group_set) {
+			if (!groups) {
 				fprintf(stderr, "Multicast group must be given before interface.\n");
 				exit(EXIT_FAILURE);
 			}
-			iface_set = true;
-			last_ifindex = if_nametoindex(optarg);
-			if(!join_mcast(sock, mgroup_addr, last_ifindex)) {
+			int ifindex = if_nametoindex(optarg);
+			if (!join_mcast(sock, mgroup_addr, ifindex)) {
 				fprintf(stderr, "Could not join multicast group on %s: ", optarg);
-				last_ifindex = 0;
+				continue;
 			}
+
+			struct interface_info *new_iface = malloc(sizeof(*new_iface));
+			new_iface->ifindex = ifindex;
+			new_iface->max_multicast_delay = MAX_MULTICAST_DELAY_DEFAULT;
+			new_iface->next = groups->interfaces;
+			groups->interfaces = new_iface;
+
 			break;
 
 		case 't':
-			if (!iface_set) {
+			if (!groups || !groups->interfaces) {
 				fprintf(stderr, "Interface must be given before max response delay.\n");
 				exit(EXIT_FAILURE);
 			}
@@ -698,17 +727,7 @@ int main(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			}
 
-			if (last_ifindex) {
-				// insert the interface delay info at the beginning of the list
-				struct interface_delay_info **head = &if_delay_info_list;
-				struct interface_delay_info *old_head = if_delay_info_list;
-
-				*head = malloc(sizeof(*if_delay_info_list));
-				(*head)->ifindex = last_ifindex;
-				(*head)->max_multicast_delay = max_multicast_delay;
-				(*head)->next = old_head;
-			}
-
+			groups->interfaces->max_multicast_delay = max_multicast_delay;
 
 			break;
 
@@ -734,7 +753,7 @@ int main(int argc, char **argv) {
 	struct request_schedule schedule = {};
 
 	while (true) {
-		accept_request(&schedule, sock, if_delay_info_list);
+		accept_request(&schedule, sock, groups);
 
 		struct request_task *task = schedule_pop_request(&schedule);
 
