@@ -210,7 +210,7 @@ static const struct respondd_provider_info * get_providers(const char *filename)
 	return ret;
 }
 
-bool schedule_push_request(struct request_schedule *s, struct request_task *new_task) {
+static bool schedule_push_request(struct request_schedule *s, struct request_task *new_task) {
 	if (s->length >= SCHEDULE_LEN)
 		// schedule is full
 		return false;
@@ -229,7 +229,7 @@ bool schedule_push_request(struct request_schedule *s, struct request_task *new_
 	return true;
 }
 
-int64_t schedule_idle_time(struct request_schedule *s) {
+static int64_t schedule_idle_time(struct request_schedule *s) {
 	if (!s->list_head)
 		// nothing to do yet (0 = infinite time)
 		return 0;
@@ -242,7 +242,7 @@ int64_t schedule_idle_time(struct request_schedule *s) {
 		return result;
 }
 
-struct request_task * schedule_pop_request(struct request_schedule *s) {
+static struct request_task * schedule_pop_request(struct request_schedule *s) {
 	if (!s->list_head)
 		// schedule is empty
 		return NULL;
@@ -449,8 +449,8 @@ static struct json_object * handle_request(char *request, bool *compress) {
  * @compress: True, if the answer should be compressed before sending
  * @addr: Ipv6 destination address for the answer
  */
-void send_response(int sock, struct json_object *result, bool compress,
-                   struct sockaddr_in6 *addr) {
+static void send_response(int sock, struct json_object *result, bool compress,
+			  struct sockaddr_in6 *addr) {
 	const char *output = NULL;
 	size_t output_bytes;
 
@@ -488,7 +488,7 @@ void send_response(int sock, struct json_object *result, bool compress,
  * @task: The task object (including the request query and the response address)
  *        for the task.
  */
-void serve_request(struct request_task *task, int sock) {
+static void serve_request(struct request_task *task, int sock) {
 	bool compress;
 	struct json_object *result = handle_request(task->request, &compress);
 
