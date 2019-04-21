@@ -741,7 +741,8 @@ int main(int argc, char **argv) {
 			break;
 
 		default:
-			fprintf(stderr, "Invalid parameter -%c ignored.\n", optopt);
+			fprintf(stderr, "Invalid parameter -%c.\n", optopt);
+			exit(EXIT_FAILURE);
 		}
 	}
 
