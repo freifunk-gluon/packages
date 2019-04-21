@@ -612,9 +612,9 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	}
 
 	struct request_task *new_task = malloc(sizeof(*new_task));
+	// input_bytes cannot be greater than REQUEST_MAXLEN-1
+	memcpy(new_task->request, input, input_bytes + 1);
 	new_task->scheduled_time = 0;
-	strncpy(new_task->request, input, input_bytes + 1);
-	new_task->request[input_bytes] = 0;
 	new_task->client_addr = addr;
 
 	bool is_scheduled;
