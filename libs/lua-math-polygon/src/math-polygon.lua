@@ -53,7 +53,7 @@ function M.point_in_polygon(poly, point)
 	return t
 end
 
--- Convert rectangular defined by two point into polygon
+-- Convert rectangle defined by two point into polygon
 function M.two_point_rec_to_poly(rec)
 	local poly = {};
 	poly[1]["lon"] = rec[1].lon
