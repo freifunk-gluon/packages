@@ -618,7 +618,7 @@ static void accept_request(struct request_schedule *schedule, int sock,
 	new_task->client_addr = addr;
 
 	bool is_scheduled;
-	if (iface) {
+	if (iface && iface->max_multicast_delay) {
 		// scheduling could fail because the schedule is full
 		new_task->scheduled_time = now + rand() % iface->max_multicast_delay;
 		is_scheduled = schedule_push_request(schedule, new_task);
