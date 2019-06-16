@@ -16,7 +16,7 @@ M.APIVERSION = uci.APIVERSION
 
 local Cursor = setmetatable({}, {
 	-- Forward calls to the actual UCI cursor
-	__index = function(t, f)
+	__index = function(_, f)
 		return function(self, ...)
 			local c = self.cursor
 			return c[f](c, ...)
@@ -71,13 +71,13 @@ function Cursor:delete_all(config, stype, comparator)
 
 	self:foreach(config, stype, helper)
 
-	for i, j in ipairs(del) do
+	for _, j in ipairs(del) do
 		self:delete(config, j)
 	end
 end
 
 function Cursor:section(config, type, name, values)
-	local stat = true
+	local stat
 	if name then
 		stat = self.cursor:set(config, name, type)
 	else
