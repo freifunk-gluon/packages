@@ -5,23 +5,33 @@
 -- This is basically everything useful from luci.model.uci
 -- without any luci dependency.
 
-local uci   = require "uci"
-local table = require "table"
 
-local getmetatable = getmetatable
-local next, pairs, ipairs = next, pairs, ipairs
-local type, tonumber = type, tonumber
-
-module "simple-uci"
-
-cursor = uci.cursor
-
-APIVERSION = uci.APIVERSION
-
-local Cursor = getmetatable(cursor())
+local uci = require 'uci'
 
 
-local uciset = Cursor.set
+local M = {}
+
+M.APIVERSION = uci.APIVERSION
+
+
+local Cursor = setmetatable({}, {
+	-- Forward calls to the actual UCI cursor
+	__index = function(t, f)
+		return function(self, ...)
+			local c = self.cursor
+			return c[f](c, ...)
+		end
+	end,
+})
+
+function M.cursor()
+	return setmetatable({
+		cursor = uci.cursor(),
+	}, {
+		__index = Cursor,
+	})
+end
+
 
 function Cursor:set(config, section, option, value)
 	if value ~= nil and not (type(value) == 'table' and #value == 0) then
@@ -29,7 +39,7 @@ function Cursor:set(config, section, option, value)
 			value = value and '1' or '0'
 		end
 
-		return uciset(self, config, section, option, value)
+		return self.cursor:set(config, section, option, value)
 	else
 		self:delete(config, section, option)
 		return true
@@ -69,7 +79,7 @@ end
 function Cursor:section(config, type, name, values)
 	local stat = true
 	if name then
-		stat = uciset(self, config, name, type)
+		stat = self.cursor:set(config, name, type)
 	else
 		name = self:add(config, type)
 		stat = name and true
@@ -136,3 +146,6 @@ function Cursor:set_list(config, section, option, value)
 	end
 	return false
 end
+
+
+return M
