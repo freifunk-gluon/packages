@@ -1,7 +1,4 @@
-local assert = assert
-local string = string
-
-module 'pretty_hostname'
+local M = {}
 
 local function get_system(uci)
 	local system
@@ -14,13 +11,13 @@ local function get_system(uci)
 	return assert(system, 'unable to find system section')
 end
 
-function get(uci)
+function M.get(uci)
 	local system = get_system(uci)
 
 	return system.pretty_hostname or system.hostname
 end
 
-function set(uci, pretty_hostname)
+function M.set(uci, pretty_hostname)
 	local system = get_system(uci)['.name']
 
 	local hostname = string.gsub(pretty_hostname, '[^a-zA-Z0-9%-]', '')
@@ -41,3 +38,5 @@ function set(uci, pretty_hostname)
 
 	uci:set('system', system, 'hostname', hostname)
 end
+
+return M
