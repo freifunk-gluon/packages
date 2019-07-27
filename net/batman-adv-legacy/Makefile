@@ -25,7 +25,7 @@ define KernelPackage/batman-adv-legacy
   MAINTAINER:=Marek Lindner <lindner_marek@yahoo.de>
   SUBMENU:=Network Support
   DEPENDS:=+kmod-lib-crc16 +kmod-crypto-crc32c +kmod-lib-crc32c +libc
-  TITLE:=B.A.T.M.A.N. Adv
+  TITLE:=B.A.T.M.A.N. Adv Legacy
   FILES:=$(PKG_BUILD_DIR)/batman-adv-legacy.$(LINUX_KMOD_SUFFIX)
 endef
 
