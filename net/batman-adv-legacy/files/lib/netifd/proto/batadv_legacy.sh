@@ -4,12 +4,12 @@
 . ../netifd-proto.sh
 init_proto "$@"
 
-proto_batadv_init_config() {
+proto_batadv_legacy_init_config() {
 	proto_config_add_string "mesh"
 	proto_config_add_string "mesh_no_rebroadcast"
 }
 
-proto_batadv_setup() {
+proto_batadv_legacy_setup() {
 	local config="$1"
 	local iface="$2"
 
@@ -23,11 +23,11 @@ proto_batadv_setup() {
 	proto_send_update "$config"
 }
 
-proto_batadv_teardown() {
+proto_batadv_legacy_teardown() {
 	local config="$1"
 	local iface="$2"
 
 	(echo "none" > "/sys/class/net/$iface/batman_adv/mesh_iface") 2>/dev/null
 }
 
-add_protocol batadv
+add_protocol batadv_legacy
