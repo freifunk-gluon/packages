@@ -22,7 +22,7 @@ include $(INCLUDE_DIR)/package.mk
 
 define KernelPackage/batman-adv-legacy
   URL:=http://www.open-mesh.org/
-  MAINTAINER:=Marek Lindner <lindner_marek@yahoo.de>
+  MAINTAINER:=Matthias Schiffer <mschiffer@universe-factory.net>, Linus Lüssing <linus.luessing@c0d3.blue>
   SUBMENU:=Network Support
   DEPENDS:=+kmod-lib-crc16 +kmod-crypto-crc32c +kmod-lib-crc32c +libc
   TITLE:=B.A.T.M.A.N. Adv Legacy
