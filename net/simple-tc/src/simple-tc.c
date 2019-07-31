@@ -62,9 +62,9 @@ static int nlerror;
 
 static inline void print_error(const char *prefix, const char *message, int err) {
 	if (err)
-		fprintf(stderr, "uradvd: %s: %s: %s\n", prefix, message, strerror(err));
+		fprintf(stderr, "simple-tc: %s: %s: %s\n", prefix, message, strerror(err));
 	else
-		fprintf(stderr, "uradvd: %s: %s\n", prefix, message);
+		fprintf(stderr, "simple-tc: %s: %s\n", prefix, message);
 }
 
 __attribute__((noreturn)) static inline void exit_error(const char *message, int err) {
@@ -239,7 +239,7 @@ static void do_egress(double rate) {
 
 
 static inline void usage(void) {
-	fprintf(stderr, "Usage: gluon-simple-tc <interface> <ingress Kbit/s>|- <egress Kbit/s>|-\n");
+	fprintf(stderr, "Usage: simple-tc <interface> <ingress Kbit/s>|- <egress Kbit/s>|-\n");
 	exit(1);
 }
 
