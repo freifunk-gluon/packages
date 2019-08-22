@@ -1,9 +1,9 @@
 #!/bin/sh
 
-. /lib/batman-adv/config.sh
+. /lib/batman-adv-legacy/config.sh
 
 bat_load_module
-config_load batman-adv
+config_load batman-adv-legacy
 
 case "$ACTION" in
 	add)

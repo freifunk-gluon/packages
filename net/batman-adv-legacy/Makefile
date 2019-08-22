@@ -22,12 +22,11 @@ include $(INCLUDE_DIR)/package.mk
 
 define KernelPackage/batman-adv-legacy
   URL:=http://www.open-mesh.org/
-  MAINTAINER:=Marek Lindner <lindner_marek@yahoo.de>
+  MAINTAINER:=Matthias Schiffer <mschiffer@universe-factory.net>, Linus Lüssing <linus.luessing@c0d3.blue>
   SUBMENU:=Network Support
   DEPENDS:=+kmod-lib-crc16 +kmod-crypto-crc32c +kmod-lib-crc32c +libc
-  TITLE:=B.A.T.M.A.N. Adv
-  FILES:=$(PKG_BUILD_DIR)/batman-adv.$(LINUX_KMOD_SUFFIX)
-  AUTOLOAD:=$(call AutoLoad,50,batman-adv)
+  TITLE:=B.A.T.M.A.N. Adv Legacy
+  FILES:=$(PKG_BUILD_DIR)/batman-adv-legacy.$(LINUX_KMOD_SUFFIX)
 endef
 
 define KernelPackage/batman-adv-legacy/description
@@ -59,12 +58,17 @@ define Build/Prepare
 		$(PKG_BUILD_DIR)/main.h
 endef
 
+define Build/Compile
+	$(call Build/Compile/Default,)
+	mv $(PKG_BUILD_DIR)/batman-adv.$(LINUX_KMOD_SUFFIX) $(PKG_BUILD_DIR)/batman-adv-legacy.$(LINUX_KMOD_SUFFIX)
+endef
+
 define KernelPackage/batman-adv-legacy/install
-	$(INSTALL_DIR) $(1)/etc/config $(1)/etc/hotplug.d/net $(1)/etc/hotplug.d/iface $(1)/lib/batman-adv $(1)/usr/sbin $(1)/lib/netifd/proto
-	$(INSTALL_DATA) ./files/etc/config/batman-adv $(1)/etc/config
-	$(INSTALL_DATA) ./files/lib/batman-adv/config.sh $(1)/lib/batman-adv
-	$(INSTALL_BIN) ./files/etc/hotplug.d/net/99-batman-adv $(1)/etc/hotplug.d/net
-	$(INSTALL_BIN) ./files/lib/netifd/proto/batadv.sh $(1)/lib/netifd/proto
+	$(INSTALL_DIR) $(1)/etc/config $(1)/etc/hotplug.d/net $(1)/etc/hotplug.d/iface $(1)/lib/batman-adv-legacy $(1)/usr/sbin $(1)/lib/netifd/proto
+	$(INSTALL_DATA) ./files/etc/config/batman-adv-legacy $(1)/etc/config
+	$(INSTALL_DATA) ./files/lib/batman-adv-legacy/config.sh $(1)/lib/batman-adv-legacy
+	$(INSTALL_BIN) ./files/etc/hotplug.d/net/99-batman-adv-legacy $(1)/etc/hotplug.d/net
+	$(INSTALL_BIN) ./files/lib/netifd/proto/batadv_legacy.sh $(1)/lib/netifd/proto
 endef
 
 $(eval $(call KernelPackage,batman-adv-legacy))
