@@ -8,10 +8,10 @@ PKG_MAINTAINER:=Matthias Schiffer <mschiffer@universe-factory.net>
 PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=COPYRIGHT
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://github.com/jirutka/luasrcdiet/archive/
-PKG_SOURCE_URL_FILE:=v$(PKG_VERSION).tar.gz
-PKG_HASH:=48162e63e77d009f5848f18a5cabffbdfc867d0e5e73c6d407f6af5d6880151b
+PKG_SOURCE_URL:=https://github.com/jirutka/luasrcdiet.git
+PKG_SOURCE_VERSION:=f138fc9359821d9201cd6b57cfa2fcbed5b9af97
+PKG_SOURCE_PROTO:=git
+PKG_MIRROR_HASH:=d4e9c396312ef3d91d86ea192569f03875459432994bc822dbdbbd0a34e306c5
 
 HOST_BUILD_DEPENDS:=lua/host
 
@@ -29,7 +29,7 @@ define Package/luasrcdiet
 endef
 
 define Package/luasrcdiet/description
-Compresses Lua source code by removing unnecessary characters
+  Compresses Lua source code by removing unnecessary characters
 endef
 
 define Build/Compile
