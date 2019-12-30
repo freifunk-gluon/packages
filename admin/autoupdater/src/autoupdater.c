@@ -112,6 +112,7 @@ static void parse_args(int argc, char *argv[], struct settings *settings) {
 		{"no-action", no_argument,       NULL, OPTION_NO_ACTION},
 		{"force-version", no_argument, NULL, OPTION_FORCE_VERSION},
 		{"help",      no_argument,       NULL, OPTION_HELP},
+		{}
 	};
 
 	while (true) {
