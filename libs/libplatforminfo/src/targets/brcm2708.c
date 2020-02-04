@@ -1,0 +1,1 @@
+template/board_name.c
