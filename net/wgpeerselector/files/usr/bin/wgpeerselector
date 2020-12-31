@@ -1,0 +1,505 @@
+#!/usr/bin/lua
+local unistd = require 'posix.unistd'
+local syslog = require 'posix.syslog'
+local grp = require 'posix.grp'
+local sys_sock = require 'posix.sys.socket'
+local sys_stat = require 'posix.sys.stat'
+local signal = require 'posix.signal'
+local time = require 'posix.time'
+local uloop = require 'uloop'
+local ubus = require 'ubus'
+local uci = require('simple-uci').cursor()
+
+local function log(level, message)
+	if _G.is_verbose then
+		local prefix = {
+			[syslog.LOG_ERR]  = "Error: ",
+			[syslog.LOG_CRIT] = "Critical: ",
+			[syslog.LOG_INFO] = "Info: ",
+			[syslog.LOG_WARNING] = "Warning: ",
+		}
+		io.stderr:write(prefix[level]..message .. '\n')
+	end
+
+	syslog.syslog(level, message)
+end
+
+local function execute(command)
+	local f = io.popen(command)
+	if not f then
+		return nil
+	end
+
+	local data = f:read('*a')
+	f:close()
+	return data
+end
+
+local function sleep(secs)
+	-- This function calls uloop.run() for 'secs' seconds, so we can handle i/o
+	-- during that time. But be aware, that an fd should be registered to uloop,
+	-- because otherwise this function uses 100% cpu. This might be a bug in
+	-- uloop.
+	local timer = uloop.timer(function() uloop.cancel() end)
+	timer:set(secs*1000)
+	uloop.run()
+end
+
+local WGPeer = {}
+
+function WGPeer:new(o)
+	o = o or {}   -- create object if user does not provide one
+	setmetatable(o, self)
+	self.__index = self
+	-- some defaults
+	o.rx_bytes = 0
+	o.tx_bytes = 0
+	o.latest_handshake = 0
+	o.established_at = 0
+	-- terminology:
+	---> endpoint (maybe) needs dns resolution
+	---> remote is already resolved
+	o.next_remotes = {}
+	return o
+end
+
+function WGPeer:get_next_remote()
+	local ipv4_endpoint = string.match(self.endpoint, "^(%d+%.%d+%.%d+%.%d+:%d+)$")
+	if ipv4_endpoint then
+		return ipv4_endpoint
+	end
+
+	local ipv6_endpoint = string.match(self.endpoint, "^(%[[%x:]+%]:%d+)$")
+	if ipv6_endpoint then
+		return ipv6_endpoint
+	end
+
+	-- We cycle round robin through the dns responses. Therefore we keep the
+	-- results of the dns responses in self.next_remotes and pop one randomly
+	-- each time. If self.next_remotes is empty, do dns resolution again.
+	if #self.next_remotes < 1 then
+		-- do dns resolution
+		local host, port = string.match(self.endpoint, "^([%w-.]+):(%d+)$")
+		if not host or not port then
+			log(syslog.LOG_ERR, "Endpoint '"..self.endpoint.."' is not a valid endpoint.")
+			return nil
+		end
+
+		local res, _, errcode = sys_sock.getaddrinfo(host, nil, { socktype = sys_sock.SOCK_DGRAM })
+
+		if errcode then
+			log(syslog.LOG_WARNING, "DNS resolution of " .. self.endpoint .. " failed: error code " .. tostring(errcode))
+			return nil
+		end
+
+		for i = 1, #res do
+			if string.match(res[i].addr, ":") then -- IPv6
+				table.insert(self.next_remotes, '['..res[i].addr..']:'..port)
+			else -- IPv4
+				table.insert(self.next_remotes, res[i].addr..':'..port)
+			end
+		end
+	end
+
+	return table.remove(self.next_remotes, math.random(#self.next_remotes))
+end
+
+function WGPeer:install_to_kernel()
+	local remote = self:get_next_remote()
+	if not remote then
+		return false
+	end
+
+	local command = "wg set '" .. self.iface .. "' peer '" .. self.public_key .. "' " ..
+	                "allowed-ips '" .. table.concat(self.allowed_ips, ",") .. "' " ..
+	                "endpoint '" .. remote .. "' " ..
+	                "persistent-keepalive '" .. tostring(self.persistent_keepalive) .. "'"
+	log(syslog.LOG_INFO, "Setting peer: " .. command)
+	if os.execute(command) ~= 0 then
+		log(syslog.LOG_ERR, "Couldn't add peer " .. self.public_key .. " to " .. self.iface .. '.')
+		return false
+	end
+
+	-- install routes
+	for _, allowed_ip in pairs(self.allowed_ips) do
+		if os.execute("ip route add '" .. allowed_ip .. "' dev '" .. self.iface .. "'") ~= 0 then
+			log(syslog.LOG_WARNING, "Couldn't add route " .. allowed_ip .. " to " .. self.iface .. '.')
+		end
+	end
+
+	return true
+end
+
+function WGPeer:uninstall_from_kernel()
+	local command = "wg set '" .. self.iface  .. "' peer '" .. self.public_key .. "' remove"
+	log(syslog.LOG_INFO, "Removing peer: " .. command)
+	if os.execute(command) ~= 0 then
+		log(syslog.LOG_WARNING, "Couldn't remove peer " .. self.public_key .. " from " .. self.iface .. '.')
+	end
+	for _, allowed_ip in pairs(self.allowed_ips) do
+		if os.execute("ip route del '" .. allowed_ip .. "' dev '" .. self.iface .. "'") ~= 0 then
+			log(syslog.LOG_WARNING, "Couldn't del route " .. allowed_ip .. " from " .. self.iface .. '.')
+		end
+	end
+	self.established_at = 0
+end
+
+function WGPeer:update_stats_from_kernel()
+	local res = execute('wg show "' .. self.iface .. '" dump')
+
+	for line in res:gmatch("([^\n]*)[\n]?") do
+		local public_key = string.match(line, "^([^\t]+)\t");
+		-- skip potential other peers
+		if public_key == self.public_key then
+			-- skip the other parts
+			self.latest_handshake, self.tx_bytes, self.rx_bytes =
+				string.match(line, "^[^\t]+\t[^\t]+\t[^\t]+\t[^\t]+\t(%d+)\t(%d+)\t(%d+)\t[^\t]+$")
+
+			if self.established_at == 0 then
+				self.established_at = self.latest_handshake
+			end
+
+			return true
+		end
+	end
+
+	return false
+end
+
+function WGPeer:established_time()
+	if not self:has_recent_handshake() then
+		return nil
+	end
+	return (time.time() - self.established_at)
+end
+
+function WGPeer:has_recent_handshake()
+	-- wireguard handshakes are sent at least every 2 minutes, if there is
+	-- payload traffic.
+	return (time.time() - self.latest_handshake) < 150
+end
+
+local WGPeerSelector = {}
+
+function WGPeerSelector:new(o)
+	o = o or {}   -- create object if user does not provide one
+	setmetatable(o, self)
+	self.__index = self
+	-- some defaults
+	self.queued_peers = {}
+	self.peers = {}
+	return o
+end
+
+function WGPeerSelector:load_peers_from_uci()
+	uci:foreach('wgpeerselector', 'peer', function(peer)
+		if tonumber(peer.enabled) == 1 and peer.ifname == self.iface and peer.public_key then
+			-- TODO: error on wrong schema?
+			table.insert(self.peers, WGPeer:new{
+				name = peer['.name'],
+				iface = self.iface,
+				public_key = peer.public_key,
+				endpoint = peer.endpoint,
+				allowed_ips = peer.allowed_ips or {},
+				persistent_keepalive = peer.persistent_keepalive or 0,
+			})
+		end
+	end)
+
+	if #self.peers < 1 then
+		log(syslog.LOG_ERR, "No peers defined. Exiting!", true)
+		os.exit(1)
+	end
+
+	log(syslog.LOG_INFO, 'Loaded '..tostring(#self.peers)..' peers.')
+end
+
+function WGPeerSelector:queue_all_peers()
+	-- copy table
+	for _, peer in pairs(self.peers) do
+		table.insert(self.queued_peers, peer)
+	end
+end
+
+function WGPeerSelector:queue_pop_random_peer()
+	return table.remove(self.queued_peers, math.random(#self.queued_peers))
+end
+
+function WGPeerSelector:try_connect_to_peer(peer, timeout)
+	if not peer:install_to_kernel() then
+		return false
+	end
+
+	sleep(timeout)
+	peer:update_stats_from_kernel()
+
+	local connection_successful = peer:has_recent_handshake()
+
+	if not connection_successful then
+		peer:uninstall_from_kernel()
+	end
+
+	return connection_successful
+end
+
+function WGPeerSelector:cleanup()
+	for _, peer in pairs(self.peers) do
+		-- if peer is installed
+		if peer:update_stats_from_kernel() then
+			peer:uninstall_from_kernel()
+		end
+	end
+end
+
+function WGPeerSelector:wait_for_iface()
+	local function check()
+		return sys_stat.stat('/sys/class/net/' .. self.iface)
+	end
+
+	if check() then
+		return false -- no waiting was needed
+	else
+		log(syslog.LOG_WARNING, 'Iface ' .. self.iface .. ' not present. Waiting for iface.')
+	end
+
+	while not check() do
+		sleep(3)
+	end
+
+	log(syslog.LOG_INFO, 'Iface ' .. self.iface .. ' found.')
+	return true -- waiting was needed
+end
+
+function WGPeerSelector:sync_ntp()
+	-- While we rely on system.ntp.servers, we do not rely on /etc/sysntpd,
+	-- because this daemon might have other firewall rules than sysntpd.
+	-- E.g. sysntpd might be configured to sync time only via this vpn.
+	local ntp_servers = uci:get("system", "ntp", "server")
+
+	-- As ntpd has an ugly retry behaviour if dns requests fail, we resolve
+	-- dns here by ourselves. Otherwise ntpd would block our program from
+	-- continuing.
+	local dns_results = {}
+	for i = 1, #ntp_servers do
+		local res, _, errcode = sys_sock.getaddrinfo(ntp_servers[i], nil, { socktype = sys_sock.SOCK_DGRAM })
+
+		if errcode then
+			log(syslog.LOG_WARNING, "DNS resolution of ntp server " .. ntp_servers[i]
+			    .. " failed: error code " .. tostring(errcode))
+		else
+			for j = 1, #res do
+				table.insert(dns_results, res[j].addr)
+			end
+		end
+	end
+
+	if #dns_results < 1 then
+		log(syslog.LOG_WARNING, "no (valid) dns result for ntp servers. skipping time sync.")
+		return false
+	end
+
+	local command = "ntpd -n -N -q -p '" .. table.concat(dns_results, "' -p '") .. "'"
+	local time_synced = os.execute(command) == 0
+
+	if not time_synced then
+		log(syslog.LOG_WARNING, "synchronizing time failed.")
+	else
+		log(syslog.LOG_INFO, "time is now synchronized.")
+	end
+
+	return time_synced
+end
+
+function WGPeerSelector:status()
+	local result = { peers = {} }
+
+	for _, peer in pairs(self.peers) do
+		local established = peer:established_time()
+		if established then
+			result.peers[peer.name] = {
+				established = established
+			}
+		else
+			result.peers[peer.name] = false -- Fastd uses "null" here, but unfortunately
+			                                -- lua does not support setting table_keys to
+			                                -- nil.
+		end
+	end
+
+	return result
+end
+
+function WGPeerSelector:main()
+	local time_synchronized = false
+	local timeout = 5
+	local state
+	self:wait_for_iface()
+	self:cleanup() -- remove garbage, maybe due to unclean exits
+	local connected_peer = nil
+
+	local function cleanup(signame)
+		return function (_)
+			log(syslog.LOG_INFO, "Received " .. signame .. ". Cleaning up.")
+			self:cleanup()
+			os.exit(0)
+		end
+	end
+
+	signal.signal(signal.SIGINT, cleanup("SIGINT"))
+	signal.signal(signal.SIGTERM, cleanup("SIGTERM"))
+
+	while true do
+		if connected_peer then
+			state = 'established'
+		else
+			state = 'unconnected'
+		end
+
+		if not time_synchronized then
+			-- Wireguard requires time to be monotonic (always increasing). If
+			-- there was a handshake with a peer once, where we had a higher time
+			-- than our current time, this peer will not accept our handshakes
+			-- until our current time rises above the we had time when the peer had
+			-- the last handshake with us. This usually happens on devices without
+			-- real time clock, like embedded routers. When we rebooted and therefore
+			-- reset our time, the time is lower and handshakes with our last peer
+			-- will fail. Therefore we try to synchronize time by calling ntp.
+			--
+			-- Another possibility, if a boot counter is implemented is outlined here:
+			-- https://lists.zx2c4.com/pipermail/wireguard/2019-February/003850.html
+			time_synchronized = self:sync_ntp()
+		end
+
+		if #self.queued_peers < 1 then
+			self:queue_all_peers()
+		end
+
+		if state == 'unconnected' then
+			local peer = self:queue_pop_random_peer()
+
+			if self:try_connect_to_peer(peer, timeout) then
+				connected_peer = peer
+				log(syslog.LOG_INFO, 'Connection established.')
+			end
+
+		elseif state == 'established' then
+			connected_peer:update_stats_from_kernel()
+
+			if not connected_peer:has_recent_handshake() then
+				connected_peer:uninstall_from_kernel()
+				connected_peer = nil
+				log(syslog.LOG_INFO, 'Connection lost.')
+			else
+				-- check connections every 5 seconds
+				sleep(5)
+			end
+		else
+			log(syslog.LOG_CRIT, 'unknown state')
+			os.exit(1)
+		end
+
+		if #self.queued_peers < 1 then
+			-- this prevents the process from escalating if e.g. installing peers
+			-- constantly fails.
+			sleep(5)
+		end
+
+		if self:wait_for_iface() then
+			-- We needed to wait here, so interface was gone inbetween. Most likely
+			-- the interface has been reset, so there is none of our peers installed.
+			-- However, to make sure, we call the cleanup routine.
+			self:cleanup()
+			connected_peer = nil
+		end
+	end
+end
+
+-- INIT
+
+-- Parse command arguments
+_G.is_verbose = false
+local actions = {}
+local skip = false
+local change_group_to = nil
+local iface = "wg0"
+
+for i = 1, #arg do
+	if skip then
+		skip = false
+	elseif arg[i] == "--interface" or arg[i] == "-i" then
+		iface = arg[i+1]
+		skip = true
+	elseif arg[i] == "--pid-file" or arg[i] == "-p" then
+		actions['pid'] = arg[i+1]
+		skip = true
+	elseif arg[i] == "--group" then
+		change_group_to = arg[i+1]
+		skip = true
+	elseif arg[i] == "--version" then
+		actions['version'] = true
+	elseif arg[i] == "--verbose" or arg[i] == "-v" then
+		is_verbose = true
+	elseif arg[i] == "--help" or arg[i] == "-h" then
+		actions['help'] = true
+	end
+end
+
+if actions['version'] then
+	print("wgpeerselector v1")
+	os.exit(0)
+end
+
+if #arg == 1 or actions["help"] then
+	print(arg[0])
+	print('')
+	print(' -h, --help                Shows this help text')
+	print(' -i, --interface           (Existing) Wireguard Interface')
+	print(' -v, --verbose             Verbose')
+	print(' --group GROUP             Change unix group on startup')
+	print(' --version                 Shows the version information')
+	print(' --pid-file <filename>     Writes the PID to a specified file')
+	print('')
+	os.exit(0)
+end
+
+if actions['pid'] then
+	io.open(actions['pid'], 'w'):write(tostring(unistd.getpid()))
+end
+
+-- set a seed for better randomness
+math.randomseed(os.time())
+syslog.openlog('wgpeerselector', 0, syslog.LOG_DAEMON)
+
+if change_group_to then
+	local g = grp.getgrnam(change_group_to)
+	if not g then
+		log(syslog.LOG_ERR, "gluon-wan: unable to find group '"..change_group_to.."'")
+		os.exit(1)
+	end
+
+	local ok, err = unistd.setpid('g', g.gr_gid)
+	if ok ~= 0 then
+		log(syslog.LOG_ERR, "gluon-wan: unable to change group: " .. err)
+		os.exit(1)
+	end
+end
+
+
+local app = WGPeerSelector:new{iface=iface}
+app:load_peers_from_uci()
+
+local conn = ubus.connect()
+local ubus_methods = {
+	['wgpeerselector.'..iface] = {
+		status = {
+			function(req, _)
+				conn:reply(req, app:status())
+			end,
+			{}
+		},
+	}
+}
+
+conn:add(ubus_methods)
+
+app:main()
