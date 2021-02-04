@@ -114,16 +114,16 @@ function WGPeer:install_to_kernel()
 	                "allowed-ips '" .. table.concat(self.allowed_ips, ",") .. "' " ..
 	                "endpoint '" .. remote .. "' " ..
 	                "persistent-keepalive '" .. tostring(self.persistent_keepalive) .. "'"
-	log(syslog.LOG_INFO, "Setting peer: " .. command)
+	log(syslog.LOG_INFO, "Adding peer " .. self.name .. " to " .. self.iface .. ".")
 	if os.execute(command) ~= 0 then
-		log(syslog.LOG_ERR, "Couldn't add peer " .. self.public_key .. " to " .. self.iface .. '.')
+		log(syslog.LOG_ERR, "Couldn't add peer " .. self.name .. " to " .. self.iface .. ".")
 		return false
 	end
 
 	-- install routes
 	for _, allowed_ip in pairs(self.allowed_ips) do
 		if os.execute("ip route add '" .. allowed_ip .. "' dev '" .. self.iface .. "'") ~= 0 then
-			log(syslog.LOG_WARNING, "Couldn't add route " .. allowed_ip .. " to " .. self.iface .. '.')
+			log(syslog.LOG_WARNING, "Couldn't add route " .. allowed_ip .. " to " .. self.iface .. ".")
 		end
 	end
 
@@ -132,13 +132,13 @@ end
 
 function WGPeer:uninstall_from_kernel()
 	local command = "wg set '" .. self.iface  .. "' peer '" .. self.public_key .. "' remove"
-	log(syslog.LOG_INFO, "Removing peer: " .. command)
+	log(syslog.LOG_INFO, "Removing peer " .. self.name .. " from " .. self.iface ..".")
 	if os.execute(command) ~= 0 then
-		log(syslog.LOG_WARNING, "Couldn't remove peer " .. self.public_key .. " from " .. self.iface .. '.')
+		log(syslog.LOG_WARNING, "Couldn't remove peer " .. self.name .. " from " .. self.iface .. ".")
 	end
 	for _, allowed_ip in pairs(self.allowed_ips) do
 		if os.execute("ip route del '" .. allowed_ip .. "' dev '" .. self.iface .. "'") ~= 0 then
-			log(syslog.LOG_WARNING, "Couldn't del route " .. allowed_ip .. " from " .. self.iface .. '.')
+			log(syslog.LOG_WARNING, "Couldn't del route " .. allowed_ip .. " from " .. self.iface .. ".")
 		end
 	end
 	self.established_at = 0
@@ -379,7 +379,7 @@ function WGPeerSelector:main()
 
 			if self:try_connect_to_peer(peer, timeout) then
 				connected_peer = peer
-				log(syslog.LOG_INFO, 'Connection established.')
+				log(syslog.LOG_INFO, 'Connection established with '..peer.name..'.')
 			end
 
 		elseif state == 'established' then
@@ -388,7 +388,7 @@ function WGPeerSelector:main()
 			if not connected_peer:has_recent_handshake() then
 				connected_peer:uninstall_from_kernel()
 				connected_peer = nil
-				log(syslog.LOG_INFO, 'Connection lost.')
+				log(syslog.LOG_INFO, 'Connection to '..peer.name..' lost.')
 			else
 				-- check connections every 5 seconds
 				sleep(5)
