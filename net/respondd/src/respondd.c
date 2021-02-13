@@ -55,10 +55,14 @@
 
 #include <ecdsautil/ecdsa.h>
 #include <ecdsautil/sha256.h>
+#include <uci.h>
 
 #define SCHEDULE_LEN 8
 #define REQUEST_MAXLEN 256
 #define MAX_MULTICAST_DELAY_DEFAULT 0
+
+ecc_int256_t ed25519_secret;
+ecc_int256_t ed25519_public;
 
 struct interface_info {
 	struct interface_info *next;
@@ -362,11 +366,37 @@ static struct json_object * eval_providers(struct provider_list *providers) {
 	return ret;
 }
 
+int random_bytes(unsigned char *buffer, size_t len) {
+	int fd;
+	size_t read_bytes = 0;
 
-static void public_from_secret(ecc_int256_t *pub, const ecc_int256_t *secret) {
-	ecc_25519_work_t work;
-	ecc_25519_scalarmult_base(&work, secret);
-	ecc_25519_store_packed_legacy(pub, &work);
+	fd = open("/dev/random", O_RDONLY);
+
+	if (fd < 0) {
+		fprintf(stderr, "Can't open /dev/random: %s\n", strerror(errno));
+		goto out_error;
+	}
+
+	while (read_bytes < len) {
+		ssize_t ret = read(fd, buffer + read_bytes, len - read_bytes);
+
+		if (ret < 0) {
+			if (errno == EINTR)
+				continue;
+
+			fprintf(stderr, "Unable to read random bytes: %s\n", strerror(errno));
+			goto out_error;
+		}
+
+		read_bytes += ret;
+	}
+
+	close(fd);
+	return 1;
+
+out_error:
+	close(fd);
+	return 0;
 }
 
 // str must be a char[2*(offset+len)+1]
@@ -376,6 +406,92 @@ static void sprintf_hex(char *str_buf, const uint8_t *buf, size_t len, size_t of
 		snprintf(str_buf, 3, "%02hhx", buf[i]);
 		str_buf += 2;
 	}
+}
+
+int parsehex(void *buffer, const char *string, size_t len) {
+	// number of digits must be even
+	if ((strlen(string) & 1) == 1)
+		return 0;
+
+	// number of digits must be 2 * len
+	if (strlen(string) != 2 * len)
+		return 0;
+
+	while (len--) {
+		int ret;
+		ret = sscanf(string, "%02hhx", (char*)(buffer++));
+		string += 2;
+
+		if (ret != 1)
+			break;
+	}
+
+	if (len != -1)
+		return 0;
+
+	return 1;
+}
+
+ecc_int256_t read_or_generate_key() {
+	struct uci_context *ctx = uci_alloc_context();
+	if (!ctx) {
+		fprintf(stderr, "respondd: error: failed to allocate UCI context\n");
+		abort();
+	}
+
+	ctx->flags &= ~UCI_FLAG_STRICT;
+
+	struct uci_package *p;
+	struct uci_section *s;
+
+	if (uci_load(ctx, "respondd", &p) != UCI_OK) {
+		fputs("respondd: error: unable to load UCI package\n", stderr);
+		exit(1);
+	}
+
+	s = uci_lookup_section(ctx, p, "settings");
+	if (!s || strcmp(s->type, "respondd")) {
+		fputs("respondd: error: could not load UCI section respondd.settings\n", stderr);
+		exit(1);
+	}
+
+	const char *secret_str = uci_lookup_option_string(ctx, s, "secret");
+	ecc_int256_t secret;
+
+	if (!secret_str || !parsehex(&secret, secret_str, 32)) {
+		fputs("respondd: no valid key found. generating new key.\n", stderr);
+
+		// generate it
+		if (!random_bytes(secret.p, 32)) {
+			fputs("respondd: unable to read random bytes.\n", stderr);
+			exit(1);
+		}
+		ecc_25519_gf_sanitize_secret(&secret, &secret);
+
+		// save it to uci
+		char secret_str_new[64+1];
+		sprintf_hex(secret_str_new, secret.p, 32, 0);
+		struct uci_ptr ptr ={
+			.package = "respondd",
+			.section = "settings",
+			.option = "secret",
+			.value = secret_str_new,
+		};
+		uci_set(ctx, &ptr);
+		uci_commit(ctx, &ptr.p, false);
+		uci_unload(ctx, ptr.p);
+		fputs("respondd: key generated and saved.\n", stderr);
+	}
+
+	uci_free_context(ctx);
+
+	return secret;
+}
+
+static void public_from_secret(ecc_int256_t *pub, const ecc_int256_t *secret) {
+	ecc_25519_work_t work;
+	ecc_25519_scalarmult_base(&work, secret);
+	ecc_25519_store_packed_legacy(pub, &work);
 }
 
 // The string representation of obj is signed using the secret. After signing,
@@ -450,15 +566,7 @@ static struct json_object * single_request(char *type) {
 
 	struct json_object *ret = eval_providers(r->providers);
 
-	ecc_int256_t secret = { .p = {
-		0x18, 0x70, 0x58, 0x06, 0x14, 0xb8, 0xa0, 0xc3,
-		0xd2, 0x26, 0x97, 0x53, 0xeb, 0x59, 0x4a, 0xb8,
-		0x84, 0x54, 0x21, 0xb6, 0x6c, 0x0d, 0xe5, 0x31,
-		0xa2, 0xcb, 0x8e, 0x82, 0xc1, 0x65, 0x36, 0x45
-	}};
-	ecc_int256_t pub;
-	public_from_secret(&pub, &secret);
-	sign_json(ret, &secret, &pub);
+	sign_json(ret, &ed25519_secret, &ed25519_public);
 
 	if (r->cache_time) {
 		if (r->cache)
@@ -820,6 +928,10 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	// load keys for ed25519 signatures
+	ed25519_secret = read_or_generate_key();
+	public_from_secret(&ed25519_public, &ed25519_secret);
 
 	if (bind(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
 		perror("bind failed");
