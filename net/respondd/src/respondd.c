@@ -53,6 +53,9 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
+#include <ecdsautil/ecdsa.h>
+#include <ecdsautil/sha256.h>
+
 #define SCHEDULE_LEN 8
 #define REQUEST_MAXLEN 256
 #define MAX_MULTICAST_DELAY_DEFAULT 0
@@ -359,6 +362,68 @@ static struct json_object * eval_providers(struct provider_list *providers) {
 	return ret;
 }
 
+
+static void public_from_secret(ecc_int256_t *pub, const ecc_int256_t *secret) {
+	ecc_25519_work_t work;
+	ecc_25519_scalarmult_base(&work, secret);
+	ecc_25519_store_packed_legacy(pub, &work);
+}
+
+// str must be a char[2*(offset+len)+1]
+static void sprintf_hex(char *str_buf, const uint8_t *buf, size_t len, size_t offset) {
+	str_buf += 2*offset;
+	for (size_t i = 0; i < len; i++) {
+		snprintf(str_buf, 3, "%02hhx", buf[i]);
+		str_buf += 2;
+	}
+}
+
+// The string representation of obj is signed using the secret. After signing,
+// a structure containing the public key and the signature is added into obj.
+// The obj looks like this after calling sign_json(obj, ...):
+//
+//    {
+//        ...,
+//        "auth": {
+//            "pub": "25077b1914533e94a60853678b8484531a5f63463de87786f042e3d88d0bbc27",
+//            "sig": "eca0455a99a6b79edc719c18aa46c7d8f960e041f77f836326e6eae08064606320daff6f11cb0d0a2fb51a346725e3dc01e9a85f7c064ec857200c302937409"
+//        }
+//    }
+//
+// To verify the signature, the substructure "auth" has to be removed before.
+// The string representation of obj has to be densely packed. No whitespace and
+// tabs " " between keys, no newlines and the order of keys must not be changed.
+static void sign_json(struct json_object * obj, const ecc_int256_t *secret, const ecc_int256_t *pub) {
+	// TODO: This currently enables replay attacks, as the json does not contain
+	//       any time value or so... However, we do not care much, as
+	//       this is probably not an effective attack vector.
+	const char *str = json_object_to_json_string_ext(obj, JSON_C_TO_STRING_PLAIN);
+
+	// hash
+	ecc_int256_t hash;
+	ecdsa_sha256_context_t hash_ctx;
+	ecdsa_sha256_init(&hash_ctx);
+	ecdsa_sha256_update(&hash_ctx, str, strlen(str));
+	ecdsa_sha256_final(&hash_ctx, hash.p);
+
+	struct json_object *auth = json_object_new_object();
+
+	// generate signature
+	ecdsa_signature_t signature;
+	char signature_str[128+1];
+	ecdsa_sign_legacy(&signature, &hash, secret);
+	sprintf_hex(signature_str, signature.r.p, 32, 0);
+	sprintf_hex(signature_str, signature.s.p, 32, 32);
+	json_object_object_add(auth, "signature", json_object_new_string(signature_str));
+
+	// append pubkey
+	char pub_str[64+1];
+	sprintf_hex(pub_str, pub->p, 32, 0);
+	json_object_object_add(auth, "pubkey", json_object_new_string(pub_str));
+
+	json_object_object_add(obj, "auth", auth);
+}
+
 /**
  * Find all providers for the type and return the (eventually cached) result
  *
@@ -384,6 +449,16 @@ static struct json_object * single_request(char *type) {
 		return json_object_get(r->cache);
 
 	struct json_object *ret = eval_providers(r->providers);
+
+	ecc_int256_t secret = { .p = {
+		0x18, 0x70, 0x58, 0x06, 0x14, 0xb8, 0xa0, 0xc3,
+		0xd2, 0x26, 0x97, 0x53, 0xeb, 0x59, 0x4a, 0xb8,
+		0x84, 0x54, 0x21, 0xb6, 0x6c, 0x0d, 0xe5, 0x31,
+		0xa2, 0xcb, 0x8e, 0x82, 0xc1, 0x65, 0x36, 0x45
+	}};
+	ecc_int256_t pub;
+	public_from_secret(&pub, &secret);
+	sign_json(ret, &secret, &pub);
 
 	if (r->cache_time) {
 		if (r->cache)
