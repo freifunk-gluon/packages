@@ -501,7 +501,7 @@ static void public_from_secret(ecc_int256_t *pub, const ecc_int256_t *secret) {
 //    {
 //        ...,
 //        "auth": {
-//            "pub": "25077b1914533e94a60853678b8484531a5f63463de87786f042e3d88d0bbc27",
+//            "secure_nodeid": "25077b1914533e94a60853678b8484531a5f63463de87786f042e3d88d0bbc27",
 //            "sig": "eca0455a99a6b79edc719c18aa46c7d8f960e041f77f836326e6eae08064606320daff6f11cb0d0a2fb51a346725e3dc01e9a85f7c064ec857200c302937409"
 //        }
 //    }
@@ -535,7 +535,7 @@ static void sign_json(struct json_object * obj, const ecc_int256_t *secret, cons
 	// append pubkey
 	char pub_str[64+1];
 	sprintf_hex(pub_str, pub->p, 32, 0);
-	json_object_object_add(auth, "pubkey", json_object_new_string(pub_str));
+	json_object_object_add(auth, "secure_nodeid", json_object_new_string(pub_str));
 
 	json_object_object_add(obj, "auth", auth);
 }
