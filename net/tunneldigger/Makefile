@@ -14,7 +14,7 @@ include $(INCLUDE_DIR)/cmake.mk
 define Package/tunneldigger
   SECTION:=net
   CATEGORY:=Network
-  DEPENDS:=+libnl-tiny +kmod-l2tp +kmod-l2tp-ip +kmod-l2tp-eth +librt +libpthread
+  DEPENDS:=+libnl-tiny +kmod-l2tp +kmod-l2tp-eth +librt +libpthread
   TITLE:=L2TPv3 tunnel broker client
 endef
 
