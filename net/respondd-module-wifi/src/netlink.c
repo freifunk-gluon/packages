@@ -1,10 +1,17 @@
 #include <inttypes.h>
 
 #include <linux/nl80211.h>
+#include <linux/if_ether.h>
 #include <netlink/genl/genl.h>
 #include <netlink/genl/ctrl.h>
 
 #include "netlink.h"
+
+
+void mac_addr_n2a(char *mac_addr, unsigned char *arg) {
+	sprintf(mac_addr, "%02x:%02x:%02x:%02x:%02x:%02x", arg[0], arg[1], arg[2], arg[3], arg[4], arg[5]);
+}
+
 
 bool nl_send_dump(nl_recvmsg_msg_cb_t cb, void *cb_arg, int cmd, uint32_t cmd_arg) {
 	bool ok = false;
@@ -14,7 +21,7 @@ bool nl_send_dump(nl_recvmsg_msg_cb_t cb, void *cb_arg, int cmd, uint32_t cmd_ar
 	struct nl_msg *msg = NULL;
 
 
-#define ERR(...) { fprintf(stderr, "respondd-module-airtime: " __VA_ARGS__); goto out; }
+#define ERR(...) { fprintf(stderr, "respondd-module-wifi: " __VA_ARGS__); goto out; }
 
 	sk = nl_socket_alloc();
 	if (!sk)
