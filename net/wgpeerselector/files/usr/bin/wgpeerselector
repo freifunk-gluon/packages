@@ -195,7 +195,8 @@ end
 
 function WGPeerSelector:load_peers_from_uci()
 	uci:foreach('wgpeerselector', 'peer', function(peer)
-		if tonumber(peer.enabled) == 1 and peer.ifname == self.iface and peer.public_key then
+		if uci:get_bool('wgpeerselector', peer['.name'], 'enabled')
+		   and peer.ifname == self.iface and peer.public_key then
 			-- TODO: error on wrong schema?
 			table.insert(self.peers, WGPeer:new{
 				name = peer['.name'],
