@@ -438,8 +438,6 @@ for i = 1, #arg do
 	elseif arg[i] == "--group" then
 		change_group_to = arg[i+1]
 		skip = true
-	elseif arg[i] == "--version" then
-		actions['version'] = true
 	elseif arg[i] == "--verbose" or arg[i] == "-v" then
 		is_verbose = true
 	elseif arg[i] == "--help" or arg[i] == "-h" then
@@ -447,10 +445,6 @@ for i = 1, #arg do
 	end
 end
 
-if actions['version'] then
-	print("wgpeerselector v1")
-	os.exit(0)
-end
 
 if #arg == 1 or actions["help"] then
 	print(arg[0])
@@ -459,7 +453,6 @@ if #arg == 1 or actions["help"] then
 	print(' -i, --interface           (Existing) Wireguard Interface')
 	print(' -v, --verbose             Verbose')
 	print(' --group GROUP             Change unix group on startup')
-	print(' --version                 Shows the version information')
 	print(' --pid-file <filename>     Writes the PID to a specified file')
 	print('')
 	os.exit(0)
