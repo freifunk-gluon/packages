@@ -305,9 +305,9 @@ function WGPeerSelector:sync_ntp()
 	local time_synced = os.execute(command) == 0
 
 	if not time_synced then
-		log(syslog.LOG_WARNING, "synchronizing time failed.")
+		log(syslog.LOG_WARNING, "Time synchonization failed.")
 	else
-		log(syslog.LOG_INFO, "time is now synchronized.")
+		log(syslog.LOG_INFO, "Time synchonization was successful.")
 	end
 
 	return time_synced
@@ -476,13 +476,13 @@ syslog.openlog('wgpeerselector', 0, syslog.LOG_DAEMON)
 if change_group_to then
 	local g = grp.getgrnam(change_group_to)
 	if not g then
-		log(syslog.LOG_ERR, "gluon-wan: unable to find group '"..change_group_to.."'")
+		log(syslog.LOG_ERR, "unable to find unix group '"..change_group_to.."'")
 		os.exit(1)
 	end
 
 	local ok, err = unistd.setpid('g', g.gr_gid)
 	if ok ~= 0 then
-		log(syslog.LOG_ERR, "gluon-wan: unable to change group: " .. err)
+		log(syslog.LOG_ERR, "unable to change unix group: " .. err)
 		os.exit(1)
 	end
 end
