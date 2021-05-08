@@ -135,6 +135,7 @@ function WGPeer:uninstall_from_kernel()
 	log(syslog.LOG_INFO, "Removing peer " .. self.name .. " from " .. self.iface ..".")
 	if os.execute(command) ~= 0 then
 		log(syslog.LOG_WARNING, "Couldn't remove peer " .. self.name .. " from " .. self.iface .. ".")
+		return false
 	end
 	for _, allowed_ip in pairs(self.allowed_ips) do
 		if os.execute("ip route del '" .. allowed_ip .. "' dev '" .. self.iface .. "'") ~= 0 then
@@ -142,6 +143,7 @@ function WGPeer:uninstall_from_kernel()
 		end
 	end
 	self.established_at = 0
+	return true
 end
 
 function WGPeer:update_stats_from_kernel()
