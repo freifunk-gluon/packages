@@ -176,7 +176,7 @@ function WGPeer:established_time()
 end
 
 function WGPeer:has_recent_handshake()
-	-- wireguard handshakes are sent at least every 2 minutes, if there is
+	-- WireGuard handshakes are sent at least every 2 minutes, if there is
 	-- payload traffic.
 	return (time.time() - self.latest_handshake) < 150
 end
@@ -359,7 +359,7 @@ function WGPeerSelector:main()
 		end
 
 		if not time_synchronized then
-			-- Wireguard requires time to be monotonic (always increasing). If
+			-- WireGuard requires time to be monotonic (always increasing). If
 			-- there was a handshake with a peer once, where we had a higher time
 			-- than our current time, this peer will not accept our handshakes
 			-- until our current time rises above the we had time when the peer had
@@ -450,7 +450,7 @@ if #arg == 1 or actions["help"] then
 	print(arg[0])
 	print('')
 	print(' -h, --help                Shows this help text')
-	print(' -i, --interface           (Existing) Wireguard Interface')
+	print(' -i, --interface           (Existing) WireGuard Interface')
 	print(' -v, --verbose             Verbose')
 	print(' --group GROUP             Change unix group on startup')
 	print(' --pid-file <filename>     Writes the PID to a specified file')
