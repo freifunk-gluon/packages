@@ -4,7 +4,7 @@ project(lua-jsonc C)
 
 add_library(lua-jsonc SHARED lua-jsonc.c)
 set_property(TARGET lua-jsonc PROPERTY COMPILE_FLAGS "-Wall -std=c99")
-target_link_libraries(lua-jsonc json-c lua)
+target_link_libraries(lua-jsonc json-c)
 
 install(TARGETS lua-jsonc
   ARCHIVE DESTINATION lib
