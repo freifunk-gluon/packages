@@ -151,7 +151,7 @@ ssize_t uclient_read_account(struct uclient *cl, char *buf, int len) {
 }
 
 
-int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data, ssize_t len) {
+int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data, ssize_t len, const char *firmware_version) {
 	struct uclient_data d = { .custom = cb_data, .length = len };
 	struct uclient_cb cb = {
 		.header_done = header_done_cb,
@@ -175,6 +175,10 @@ int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data,
 		goto err;
 	if (uclient_http_set_header(cl, "User-Agent", user_agent))
 		goto err;
+	if (firmware_version != NULL) {
+		if (uclient_http_set_header(cl, "X-Firmware-Version", firmware_version))
+			goto err;
+	}
 	if (uclient_request(cl))
 		goto err;
 	uloop_run();
