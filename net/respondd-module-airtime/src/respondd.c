@@ -26,9 +26,10 @@ static struct json_object *respondd_provider_statistics(void) {
 	while (ifaces != NULL) {
 		ok = get_airtime(wireless, ifaces->ifx);
 		if (ok) {
-			newest_element_index = json_object_array_length(wireless)-1;
+			newest_element_index = json_object_array_length(wireless) - 1;
 			last = json_object_array_get_idx(wireless, newest_element_index);
-			json_object_object_add(last, "phy", json_object_new_int(ifaces->wiphy));
+			if (last)
+				json_object_object_add(last, "phy", json_object_new_int(ifaces->wiphy));
 		}
 		void *freeptr = ifaces;
 		ifaces = ifaces->next;
