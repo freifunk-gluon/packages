@@ -292,7 +292,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 
 	/* Download manifest */
 	ecdsa_sha256_init(&m->hash_ctx);
-	int err_code = get_url(manifest_url, recv_manifest_cb, &manifest_ctx, -1);
+	int err_code = get_url(manifest_url, recv_manifest_cb, &manifest_ctx, -1, s->old_version);
 	if (err_code != 0) {
 		fprintf(stderr, "autoupdater: warning: error downloading manifest: %s\n", uclient_get_errmsg(err_code));
 		goto out;
@@ -358,7 +358,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 		char image_url[strlen(mirror) + strlen(m->image_filename) + 2];
 		sprintf(image_url, "%s/%s", mirror, m->image_filename);
 		ecdsa_sha256_init(&image_ctx.hash_ctx);
-		int err_code = get_url(image_url, &recv_image_cb, &image_ctx, m->imagesize);
+		int err_code = get_url(image_url, &recv_image_cb, &image_ctx, m->imagesize, s->old_version);
 		puts("");
 		if (err_code != 0) {
 			fprintf(stderr, "autoupdater: warning: error downloading image: %s\n", uclient_get_errmsg(err_code));
