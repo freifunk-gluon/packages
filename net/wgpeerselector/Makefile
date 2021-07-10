@@ -9,7 +9,7 @@ define Package/wgpeerselector
   SECTION:=net
   CATEGORY:=Network
   TITLE:=Wireguard peer selector daemon
-  DEPENDS:=+lua +wireguard +libubox-lua +libubus-lua +luaposix
+  DEPENDS:=+lua +wireguard-tools +libubox-lua +libubus-lua +luaposix
 endef
 
 define Build/Configure
