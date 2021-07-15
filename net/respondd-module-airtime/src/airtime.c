@@ -67,20 +67,26 @@ static const char const* msg_names[NL80211_SURVEY_INFO_MAX + 1] = {
 };
 
 static int survey_airtime_handler(struct nl_msg *msg, void *arg) {
-	struct json_object *parent_json = (struct json_object *) arg;
+	struct json_object **result = arg;
+	struct json_object *freq_json = NULL;
 
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 	struct nlattr *survey_info = nla_find(genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NL80211_ATTR_SURVEY_INFO);
 
-	if (!survey_info) {
-		fprintf(stderr, "respondd-module-airtime: survey data missing in netlink message\n");
-		goto abort;
+	if (*result) {
+		fprintf(stderr, "respondd-module-airtime: callback called again after NL_STOP\n");
+		return NL_STOP;
 	}
 
-	struct json_object *freq_json = json_object_new_object();
+	if (!survey_info) {
+		fprintf(stderr, "respondd-module-airtime: survey data missing in netlink message\n");
+		return NL_STOP;
+	}
+
+	freq_json = json_object_new_object();
 	if (!freq_json) {
 		fprintf(stderr, "respondd-module-airtime: failed allocating JSON object\n");
-		goto abort;
+		return NL_STOP;
 	}
 
 	// This variable counts the number of required attributes that are
@@ -129,15 +135,19 @@ static int survey_airtime_handler(struct nl_msg *msg, void *arg) {
 			json_object_object_add(freq_json, msg_names[type], data_json);
 	}
 
-	if (req_fields == 3)
-		json_object_array_add(parent_json, freq_json);
-	else
+	/* The kernel didn't report all required fields: continue with next
+	 * record, this entry was off-channel */
+	if (req_fields != 3) {
 		json_object_put(freq_json);
+		return NL_OK;
+	}
 
-abort:
-	return NL_SKIP;
+	*result = freq_json;
+	return NL_STOP;
 }
 
-bool get_airtime(struct json_object *result, int ifx) {
-	return nl_send_dump(survey_airtime_handler, result, NL80211_CMD_GET_SURVEY, ifx);
+struct json_object * get_airtime(int ifx) {
+	struct json_object *result = NULL;
+	nl_send_dump(survey_airtime_handler, &result, NL80211_CMD_GET_SURVEY, ifx);
+	return result;
 }
