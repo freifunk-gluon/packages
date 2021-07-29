@@ -378,6 +378,22 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 		}
 	}
 
+	/* Test the image upgrade (issue #193) */
+	{
+		static const char *const test_option = " --test ";
+
+		char buf[strlen(sysupgrade_path) + strlen(test_option) + strlen(firmware_path) + 1];
+		strcpy(buf, sysupgrade_path);
+		strcat(buf, test_option);
+		strcat(buf, firmware_path);
+
+		const int sysupgrade_ret = system(buf);
+		if (WEXITSTATUS(sysupgrade_ret) != 0 ) {
+			fprintf(stderr, "autoupdater: warning: sysupgrade --test failed with return code: %d\n", WEXITSTATUS(sysupgrade_ret));
+			goto fail_after_download;
+		}
+	}
+
 	clear_manifest(m);
 
 	/**** Call sysupgrade ************************************************/
