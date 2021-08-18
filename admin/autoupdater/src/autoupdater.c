@@ -48,6 +48,7 @@
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
 
 #define MAX_LINE_LENGTH 512
@@ -275,6 +276,30 @@ static void recv_image_cb(struct uclient *cl) {
 	}
 }
 
+static int sysupgrade_image_check(const char *image_path)
+{
+	int status;
+	pid_t pid;
+	int ret;
+	
+	if ((pid = fork()) == 0) {
+		execl(sysupgrade_path, sysupgrade_path, "-T", firmware_path, NULL);
+		_exit(127);
+	}
+
+	if (pid < 0)
+		return pid;
+
+	ret = waitpid(pid, &status, 0);
+	if (ret < 0)
+		return -1;
+
+	if (!WIFEXITED(status))
+		return -1;
+
+	return WEXITSTATUS(status);
+}
+
 
 static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	bool ret = false;
@@ -379,6 +404,13 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	}
 
 	clear_manifest(m);
+
+	/* Test if the image is compatible with the device. This avoids bringing down services. */
+	if (sysupgrade_image_check(firmware_path)) {
+		/* Image not compatible */
+		fputs("autoupdater: error: image not compatible with device\n", stderr);
+		goto fail_after_download;
+	}
 
 	/**** Call sysupgrade ************************************************/
 	if (s->no_action) {
