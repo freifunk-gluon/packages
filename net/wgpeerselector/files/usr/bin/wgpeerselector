@@ -323,9 +323,7 @@ function WGPeerSelector:status()
 				established = established
 			}
 		else
-			result.peers[peer.name] = false -- Fastd uses "null" here, but unfortunately
-			                                -- lua does not support setting table_keys to
-			                                -- nil.
+			result.peers[peer.name] = { }
 		end
 	end
 
