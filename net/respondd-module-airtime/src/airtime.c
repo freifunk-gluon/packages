@@ -57,7 +57,7 @@
  * @__NL80211_SURVEY_INFO_AFTER_LAST: internal use
  */
 
-static const char const* msg_names[NL80211_SURVEY_INFO_MAX + 1] = {
+static const char *const msg_names[NL80211_SURVEY_INFO_MAX + 1] = {
 	[NL80211_SURVEY_INFO_FREQUENCY] = "frequency",
 	[NL80211_SURVEY_INFO_CHANNEL_TIME] = "active",
 	[NL80211_SURVEY_INFO_CHANNEL_TIME_BUSY] = "busy",
