@@ -37,7 +37,7 @@ bool nl_send_dump(nl_recvmsg_msg_cb_t cb, void *cb_arg, int cmd, uint32_t cmd_ar
 		ERR("nlmsg_alloc() failed\n");
 
 	if (!genlmsg_put(msg, 0, 0, ctrl, 0, NLM_F_DUMP, cmd, 0))
-		ERR("genlmsg_put() failed while putting cmd %d\n", ret, cmd);
+		ERR("genlmsg_put() failed while putting cmd %d\n", cmd);
 
 	if (cmd_arg != 0)
 		NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, cmd_arg);
