@@ -4,7 +4,7 @@ PKG_NAME:=tunneldigger
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=git://github.com/wlanslovenija/tunneldigger.git
+PKG_SOURCE_URL:=https://github.com/wlanslovenija/tunneldigger.git
 PKG_SOURCE_DATE:=2020-05-17
 PKG_SOURCE_VERSION:=8995046a2ba8f111391e01e6bb38a352c0cedaa1
 
