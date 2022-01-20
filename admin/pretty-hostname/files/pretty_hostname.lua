@@ -36,6 +36,10 @@ function M.set(uci, pretty_hostname)
 		uci:set('system', system, 'pretty_hostname', pretty_hostname)
 	end
 
+	local kernel = assert(io.open('/proc/sys/kernel/hostname', 'w'))
+	kernel:write(hostname)
+	kernel:close()
+
 	uci:set('system', system, 'hostname', hostname)
 end
 
