@@ -12,7 +12,7 @@ PKG_VERSION:=2019-04-22
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=git://github.com/freifunk-gluon/batman-adv-legacy.git
+PKG_SOURCE_URL:=https://github.com/freifunk-gluon/batman-adv-legacy.git
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 PKG_SOURCE_VERSION:=ea42aed32284121e90857089cd741e237d34cdea
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
