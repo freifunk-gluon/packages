@@ -17,7 +17,7 @@ BATCTL_VERSION:=2013.4.0
 BATCTL_MD5SUM:=42e269cc710bbc9a8fd17628201d4258
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=git://github.com/freifunk-gluon/batman-adv-legacy.git
+PKG_SOURCE_URL:=https://github.com/freifunk-gluon/batman-adv-legacy.git
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 PKG_SOURCE_VERSION:=7b775e93b7d2d3f10b137e76090c82a06af65272
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
