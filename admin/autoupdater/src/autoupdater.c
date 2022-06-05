@@ -382,11 +382,13 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	{
 		static const char *const exec_builtin = "exec ";
 		static const char *const test_option = " --test ";
+		static const char *const compat_option = " --ignore-minor-compat-version ";
 
-		char buf[strlen(exec_builtin) + strlen(sysupgrade_path) + strlen(test_option) + strlen(firmware_path) + 1];
+		char buf[strlen(exec_builtin) + strlen(sysupgrade_path) + strlen(test_option) + strlen(compat_option) + strlen(firmware_path) + 1];
 		strcpy(buf, exec_builtin);
 		strcat(buf, sysupgrade_path);
 		strcat(buf, test_option);
+		strcat(buf, compat_option);
 		strcat(buf, firmware_path);
 
 		const int sysupgrade_ret = system(buf);
@@ -416,7 +418,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	/* Unset FD_CLOEXEC so the lockfile stays locked during sysupgrade */
 	fcntl(lock_fd, F_SETFD, 0);
 
-	execl(sysupgrade_path, sysupgrade_path, firmware_path, NULL);
+	execl(sysupgrade_path, sysupgrade_path, "--ignore-minor-compat-version", firmware_path, NULL);
 
 	/* execl() shouldn't return */
 	fputs("autoupdater: error: failed to call sysupgrade\n", stderr);
