@@ -97,7 +97,7 @@ struct provider {
 
 static int run_command(const char *command) {
         int pipefd[2];
-        if (pipe(pipefd) < 0) {
+        if (pipe2(pipefd, O_CLOEXEC) < 0) {
                 syslog(LOG_ERR, "pipe: %s", strerror(errno));
                 return -1;
         }
@@ -115,11 +115,7 @@ static int run_command(const char *command) {
                 return pipefd[0];
         }
         else {
-                close(pipefd[0]);
                 dup2(pipefd[1], STDOUT_FILENO);
-
-                if (pipefd[1] != STDOUT_FILENO)
-                        close(pipefd[1]);
 
                 struct sigaction action = {};
                 sigemptyset(&action.sa_mask);
