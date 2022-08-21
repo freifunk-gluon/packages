@@ -35,7 +35,7 @@ static struct json_object * respondd_provider_neighbours(void) {
             if (!neighmac)
                 continue;
 
-            json_object_array_add(neighbors_array, neighmac);
+            json_object_array_add(neighbors_array, json_object_new_string(neighmac));
         }
         lldpctl_atom_dec_ref(neighbors);
         json_object_object_add(ret_lldp, portmac, neighbors_array);
