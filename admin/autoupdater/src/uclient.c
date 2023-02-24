@@ -159,6 +159,7 @@ int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data,
 		.data_eof = eof_cb,
 		.error = request_done,
 	};
+	int ret = UCLIENT_ERROR_CONNECT;
 
 	struct uclient *cl = uclient_new(url, NULL, &cb);
 	if (!cl)
@@ -182,16 +183,17 @@ int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data,
 	if (uclient_request(cl))
 		goto err;
 	uloop_run();
-	uclient_free(cl);
 
-	if (!d.err_code && d.length >= 0 && d.downloaded != d.length)
-		return UCLIENT_ERROR_SIZE_MISMATCH;
+	if (!d.err_code && d.length >= 0 && d.downloaded != d.length) {
+		ret = UCLIENT_ERROR_SIZE_MISMATCH;
+		goto err;
+	}
 
-	return d.err_code;
+	ret = d.err_code;
 
 err:
 	if (cl)
 		uclient_free(cl);
 
-	return UCLIENT_ERROR_CONNECT;
+	return ret;
 }
