@@ -43,14 +43,21 @@ enum uclient_own_error_code {
 	UCLIENT_ERROR_CONNECTION_RESET_PREMATURELY,
 	UCLIENT_ERROR_SIZE_MISMATCH,
 	UCLIENT_ERROR_STATUS_CODE = 1024,
+	UCLIENT_ERROR_INTERRUPTED = 2048,
 };
 
 
 const char *uclient_get_errmsg(int code) {
-	static char http_code_errmsg[16];
+	static char http_code_errmsg[34];
 	if (code & UCLIENT_ERROR_STATUS_CODE) {
-		snprintf(http_code_errmsg, 16, "HTTP error %d",
-			code & (~UCLIENT_ERROR_STATUS_CODE));
+		snprintf(http_code_errmsg, sizeof(http_code_errmsg),
+			"HTTP error %d", code & (~UCLIENT_ERROR_STATUS_CODE));
+		return http_code_errmsg;
+	}
+	if (code & UCLIENT_ERROR_INTERRUPTED) {
+		snprintf(http_code_errmsg, sizeof(http_code_errmsg),
+			"Interrupted by signal %d",
+			code & (~UCLIENT_ERROR_INTERRUPTED));
 		return http_code_errmsg;
 	}
 	switch(code) {
@@ -69,6 +76,13 @@ const char *uclient_get_errmsg(int code) {
 	default:
 		return "Unknown error";
 	}
+}
+
+int uclient_interrupted_signal(int code) {
+	if (code & UCLIENT_ERROR_INTERRUPTED)
+		return code & (~UCLIENT_ERROR_INTERRUPTED);
+
+	return 0;
 }
 
 
@@ -181,7 +195,13 @@ int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data,
 	}
 	if (uclient_request(cl))
 		goto err;
-	uloop_run();
+
+	ret = uloop_run();
+	if (ret) {
+		/* uloop_run() returns a signal number when interrupted */
+		ret |= UCLIENT_ERROR_INTERRUPTED;
+		goto err;
+	}
 
 	if (!d.err_code && d.length >= 0 && d.downloaded != d.length) {
 		ret = UCLIENT_ERROR_SIZE_MISMATCH;

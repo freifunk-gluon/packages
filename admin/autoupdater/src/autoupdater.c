@@ -39,6 +39,7 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <math.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -281,6 +282,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	struct recv_manifest_ctx manifest_ctx = { .s = s };
 	manifest_ctx.ptr = manifest_ctx.buf;
 	struct manifest *m = &manifest_ctx.m;
+	int interrupted = 0;
 
 	/**** Get and check manifest *****************************************/
 	/* Construct manifest URL */
@@ -295,6 +297,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	int err_code = get_url(manifest_url, recv_manifest_cb, &manifest_ctx, -1, s->old_version);
 	if (err_code != 0) {
 		fprintf(stderr, "autoupdater: warning: error downloading manifest: %s\n", uclient_get_errmsg(err_code));
+		interrupted = uclient_interrupted_signal(err_code);
 		goto out;
 	}
 
@@ -362,6 +365,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 		puts("");
 		if (err_code != 0) {
 			fprintf(stderr, "autoupdater: warning: error downloading image: %s\n", uclient_get_errmsg(err_code));
+			interrupted = uclient_interrupted_signal(err_code);
 			close(image_ctx.fd);
 			goto fail_after_download;
 		}
@@ -431,6 +435,14 @@ fail_after_download:
 
 out:
 	clear_manifest(m);
+
+	/* If we were interrupted by a signal, restore original signal handlers
+	 * and re-raise signal to terminate process */
+	if (interrupted) {
+		uloop_done();
+		raise(interrupted);
+	}
+
 	return ret;
 }
 
