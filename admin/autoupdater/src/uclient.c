@@ -74,7 +74,6 @@ const char *uclient_get_errmsg(int code) {
 
 static void request_done(struct uclient *cl, int err_code) {
 	uclient_data(cl)->err_code = err_code;
-	uclient_disconnect(cl);
 	uloop_end();
 }
 
@@ -192,8 +191,10 @@ int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data,
 	ret = d.err_code;
 
 err:
-	if (cl)
+	if (cl) {
+		uclient_disconnect(cl);
 		uclient_free(cl);
+	}
 
 	return ret;
 }
