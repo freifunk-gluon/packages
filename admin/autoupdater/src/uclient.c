@@ -43,14 +43,21 @@ enum uclient_own_error_code {
 	UCLIENT_ERROR_CONNECTION_RESET_PREMATURELY,
 	UCLIENT_ERROR_SIZE_MISMATCH,
 	UCLIENT_ERROR_STATUS_CODE = 1024,
+	UCLIENT_ERROR_INTERRUPTED = 2048,
 };
 
 
 const char *uclient_get_errmsg(int code) {
-	static char http_code_errmsg[16];
+	static char http_code_errmsg[34];
 	if (code & UCLIENT_ERROR_STATUS_CODE) {
-		snprintf(http_code_errmsg, 16, "HTTP error %d",
-			code & (~UCLIENT_ERROR_STATUS_CODE));
+		snprintf(http_code_errmsg, sizeof(http_code_errmsg),
+			"HTTP error %d", code & (~UCLIENT_ERROR_STATUS_CODE));
+		return http_code_errmsg;
+	}
+	if (code & UCLIENT_ERROR_INTERRUPTED) {
+		snprintf(http_code_errmsg, sizeof(http_code_errmsg),
+			"Interrupted by signal %d",
+			code & (~UCLIENT_ERROR_INTERRUPTED));
 		return http_code_errmsg;
 	}
 	switch(code) {
@@ -71,10 +78,16 @@ const char *uclient_get_errmsg(int code) {
 	}
 }
 
+int uclient_interrupted_signal(int code) {
+	if (code & UCLIENT_ERROR_INTERRUPTED)
+		return code & (~UCLIENT_ERROR_INTERRUPTED);
+
+	return 0;
+}
+
 
 static void request_done(struct uclient *cl, int err_code) {
 	uclient_data(cl)->err_code = err_code;
-	uclient_disconnect(cl);
 	uloop_end();
 }
 
@@ -159,6 +172,7 @@ int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data,
 		.data_eof = eof_cb,
 		.error = request_done,
 	};
+	int ret = UCLIENT_ERROR_CONNECT;
 
 	struct uclient *cl = uclient_new(url, NULL, &cb);
 	if (!cl)
@@ -181,17 +195,26 @@ int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data,
 	}
 	if (uclient_request(cl))
 		goto err;
-	uloop_run();
-	uclient_free(cl);
 
-	if (!d.err_code && d.length >= 0 && d.downloaded != d.length)
-		return UCLIENT_ERROR_SIZE_MISMATCH;
+	ret = uloop_run();
+	if (ret) {
+		/* uloop_run() returns a signal number when interrupted */
+		ret |= UCLIENT_ERROR_INTERRUPTED;
+		goto err;
+	}
 
-	return d.err_code;
+	if (!d.err_code && d.length >= 0 && d.downloaded != d.length) {
+		ret = UCLIENT_ERROR_SIZE_MISMATCH;
+		goto err;
+	}
+
+	ret = d.err_code;
 
 err:
-	if (cl)
+	if (cl) {
+		uclient_disconnect(cl);
 		uclient_free(cl);
+	}
 
-	return UCLIENT_ERROR_CONNECT;
+	return ret;
 }
