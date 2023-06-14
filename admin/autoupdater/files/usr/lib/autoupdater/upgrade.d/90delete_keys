@@ -1,0 +1,9 @@
+#!/usr/bin/lua
+local handle = io.popen("ls /etc/opkg/keys -1")
+local files = handle:read("*a")
+handle:close()
+
+for file in files:gmatch("[^\r\n]+") do
+  local filePath = "/etc/opkg/keys/" .. file
+  os.remove(filePath)
+end
