@@ -127,6 +127,7 @@ void ebt_list_extensions()
 static int lock_file()
 {
 	int fd, try = 0;
+	int ret = 0;
 
 retry:
 	fd = open(LOCKFILE, O_CREAT, 00600);
@@ -136,7 +137,10 @@ retry:
 		try = 1;
 		goto retry;
 	}
-	return flock(fd, LOCK_EX);
+	ret = flock(fd, LOCK_EX | LOCK_NB);
+	if (ret)
+		close(fd);
+	return ret;
 }
 
 /* Get the table from the kernel or from a binary file */
