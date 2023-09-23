@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2023 Linus Lüssing <linus.luessing@c0d3.blue>
+
+. /lib/functions.sh
+
+[ -z "$INTERFACE" ] && exit 0
+[ "$ACTION" != "ifup" ] && [ "$ACTION" != "ifdown" ] && exit 0
+
+/etc/init.d/brmldproxy enabled || exit 0
+
+
+brmldproxy_handle() {
+	local cfg="$1"
+	local disabled
+	local bridge
+
+	config_get_bool disabled "$cfg" disabled 0
+	[ "$disabled" -gt 0 ] && return 0
+
+	config_get bridge "$cfg" bridge
+
+	[ -z "$bridge" ] && return 0
+	[ "$bridge" != "$INTERFACE" ] && return 0
+
+	if [ "$ACTION" = "ifup" ]; then
+		/etc/init.d/brmldproxy start "$cfg" || return 0
+	else
+		/etc/init.d/brmldproxy stop "brmldproxy.$cfg" || return 0
+	fi
+
+	# success, stop
+	return 1
+}
+
+config_load brmldproxy
+
+config_foreach brmldproxy_handle brmldproxy
