@@ -1,9 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=simple-tc
-PKG_VERSION:=2
-
-PKG_CONFIG_DEPENDS := CONFIG_KERNEL_NET_SCH_TBF CONFIG_KERNEL_NET_SCH_INGRESS CONFIG_KERNEL_NET_CLS_BASIC KERNEL_NET_ACT_POLICE
+PKG_VERSION:=3
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -11,7 +9,7 @@ define Package/simple-tc
   SECTION:=net
   CATEGORY:=Network
   TITLE:=Simple bandwidth limiting
-  DEPENDS:=+!KERNEL_NET_SCH_TBF:kmod-sched-core +!KERNEL_NET_SCH_INGRESS:kmod-sched-core +!KERNEL_NET_CLS_BASIC:kmod-sched +!KERNEL_NET_ACT_POLICE:kmod-sched +libnl-tiny
+  DEPENDS:=+kmod-sched-core +kmod-sched-act-police +libnl-tiny
 endef
 
 TARGET_CFLAGS += -I$(STAGING_DIR)/usr/include/libnl-tiny
