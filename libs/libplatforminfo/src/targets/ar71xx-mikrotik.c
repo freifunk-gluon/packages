@@ -1,1 +1,0 @@
-template/nosysupgrade.c
