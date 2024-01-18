@@ -380,7 +380,7 @@ function WGPeerSelector:main()
 
 			if self:try_connect_to_peer(peer, timeout) then
 				connected_peer = peer
-				log(syslog.LOG_INFO, 'Connection established with '..peer.name..'.')
+				log(syslog.LOG_INFO, 'Connection established with '..connected_peer.name..'.')
 			end
 
 		elseif state == 'established' then
@@ -388,8 +388,8 @@ function WGPeerSelector:main()
 
 			if not connected_peer:has_recent_handshake() then
 				connected_peer:uninstall_from_kernel()
+				log(syslog.LOG_INFO, 'Connection to '..connected_peer.name..' lost.')
 				connected_peer = nil
-				log(syslog.LOG_INFO, 'Connection to '..peer.name..' lost.')
 			else
 				-- check connections every 5 seconds
 				sleep(5)
