@@ -292,7 +292,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 
 	/* Download manifest */
 	ecdsa_sha256_init(&m->hash_ctx);
-	int err_code = get_url(manifest_url, recv_manifest_cb, &manifest_ctx, -1);
+	int err_code = get_url(manifest_url, recv_manifest_cb, &manifest_ctx, -1, s->old_version);
 	if (err_code != 0) {
 		fprintf(stderr, "autoupdater: warning: error downloading manifest: %s\n", uclient_get_errmsg(err_code));
 		goto out;
@@ -358,7 +358,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 		char image_url[strlen(mirror) + strlen(m->image_filename) + 2];
 		sprintf(image_url, "%s/%s", mirror, m->image_filename);
 		ecdsa_sha256_init(&image_ctx.hash_ctx);
-		int err_code = get_url(image_url, &recv_image_cb, &image_ctx, m->imagesize);
+		int err_code = get_url(image_url, &recv_image_cb, &image_ctx, m->imagesize, s->old_version);
 		puts("");
 		if (err_code != 0) {
 			fprintf(stderr, "autoupdater: warning: error downloading image: %s\n", uclient_get_errmsg(err_code));
@@ -374,6 +374,24 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 		ecdsa_sha256_final(&image_ctx.hash_ctx, hash.p);
 		if (memcmp(hash.p, m->image_hash, ECDSA_SHA256_HASH_SIZE)) {
 			fputs("autoupdater: warning: invalid image checksum!\n", stderr);
+			goto fail_after_download;
+		}
+	}
+
+	/* Test the image upgrade (issue #193) */
+	{
+		static const char *const exec_builtin = "exec ";
+		static const char *const test_option = " --test ";
+
+		char buf[strlen(exec_builtin) + strlen(sysupgrade_path) + strlen(test_option) + strlen(firmware_path) + 1];
+		strcpy(buf, exec_builtin);
+		strcat(buf, sysupgrade_path);
+		strcat(buf, test_option);
+		strcat(buf, firmware_path);
+
+		const int sysupgrade_ret = system(buf);
+		if (WEXITSTATUS(sysupgrade_ret) != 0 ) {
+			fprintf(stderr, "autoupdater: warning: sysupgrade --test failed with return code: %d\n", WEXITSTATUS(sysupgrade_ret));
 			goto fail_after_download;
 		}
 	}
