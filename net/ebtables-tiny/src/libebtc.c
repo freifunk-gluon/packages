@@ -36,6 +36,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <time.h>
 
 static void decrease_chain_jumps(struct ebt_u_replace *replace);
 static int iterate_entries(struct ebt_u_replace *replace, int type);
@@ -147,6 +148,8 @@ retry:
 int ebt_get_kernel_table(struct ebt_u_replace *replace)
 {
 	int ret;
+	struct timespec req = {0};
+	int errcount = 0;
 
 	if (!ebt_find_table(replace->name)) {
 		ebt_print_error("Bad table name '%s'", replace->name);
@@ -159,8 +162,12 @@ int ebt_get_kernel_table(struct ebt_u_replace *replace)
 			 * this file locking is disabled by default. */
 			ebt_print_error2("Unable to create lock file "LOCKFILE);
 		}
-		fprintf(stderr, "Trying to obtain lock %s\n", LOCKFILE);
-		sleep(1);
+		if (errcount++ % 20 == 0) {
+			fprintf(stderr, "Trying to obtain lock %s\n", LOCKFILE);
+		}
+		req.tv_sec = 0;
+		req.tv_nsec = 50*1000*1000; //50ms
+		nanosleep(&req, NULL);
 	}
 	/* Get the kernel's information */
 	if (ebt_get_table(replace))
