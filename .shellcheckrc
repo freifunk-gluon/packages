@@ -1,0 +1,2 @@
+# Better busybox ash compatibility without requiring shellcheck 0.10+
+disable=SC2039,SC3043,SC3037,SC3057
