@@ -15,7 +15,7 @@ local function foreach_radio(f)
 	local status = uconn:call('network.wireless', 'status', {})
 	ubus.close(uconn)
 
-	for name, radio in pairs(status) do
+	for _, radio in pairs(status) do
 		for _, iface in ipairs(radio.interfaces) do
 			if f(iface.ifname) then
 				break
@@ -76,7 +76,7 @@ end
 local geolocate = {}
 
 function geolocate.locate(blacklist)
-	ok, result = pcall(locate, blacklist)
+	local ok, result = pcall(locate, blacklist)
 	if ok then
 		return result
 	else
