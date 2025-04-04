@@ -54,6 +54,8 @@ function WGPeer:new(o)
 	-- some defaults
 	o.rx_bytes = 0
 	o.tx_bytes = 0
+	o.prev_rx_bytes = 0
+	o.prev_tx_bytes = 0
 	o.latest_handshake = 0
 	o.established_at = 0
 	-- terminology:
@@ -175,10 +177,17 @@ function WGPeer:established_time()
 	return (time.time() - self.established_at)
 end
 
-function WGPeer:has_recent_handshake()
+function WGPeer:has_recent_success()
 	-- WireGuard handshakes are sent at least every 2 minutes, if there is
 	-- payload traffic.
-	return (time.time() - self.latest_handshake) < 150
+	if 150 < (time.time() - self.latest_handshake) then return false end
+	-- Check if actually traffic was able to be received
+	if 0 == (self.rx_bytes - self.prev_rx_bytes) then return false end
+	self.prev_rx_bytes = self.rx_bytes
+	-- Check if actually traffic was able to be sent
+	if 0 == (self.tx_bytes - self.prev_tx_bytes) then return false end
+	self.prev_tx_bytes = self.tx_bytes
+	return true
 end
 
 local WGPeerSelector = {}
@@ -236,7 +245,7 @@ function WGPeerSelector:try_connect_to_peer(peer, timeout)
 	sleep(timeout)
 	peer:update_stats_from_kernel()
 
-	local connection_successful = peer:has_recent_handshake()
+	local connection_successful = peer:has_recent_success()
 
 	if not connection_successful then
 		peer:uninstall_from_kernel()
