@@ -146,26 +146,23 @@ static float get_probability(time_t date, float priority, bool fallback) {
 	time_t diff = time(NULL) - date;
 
 	if (diff < 0) {
-		/*
-		 When the difference is negative, there are two possibilities: the
-		 manifest contains an incorrect date, or our own clock is wrong. As there
-		 isn't anything sensible to do for an incorrect manifest, we'll assume
-		 the latter is the case and update anyways as we can't do anything better
-		*/
+		/* When the difference is negative, there are two possibilities: the
+		 * manifest contains an incorrect date, or our own clock is wrong. As there
+		 * isn't anything sensible to do for an incorrect manifest, we'll assume
+		 * the latter is the case and update anyways as we can't do anything better
+		 */
 		fputs("autoupdater: warning: clock seems to be incorrect.\n", stderr);
 
 		if (get_uptime() < 600)
-			/*
-			 If the uptime is very low, it's possible we just didn't get the
-			 time over NTP yet, so we'll just wait until the next time the
-			 updater runs
-			*/
+			/* If the uptime is very low, it's possible we just didn't get the
+			 * time over NTP yet, so we'll just wait until the next time the
+			 * updater runs
+			 */
 			return 0;
 		else
-			/*
-			 Will give 1 when priority == 0, and lower probabilities the higher
-			 the priority value is (similar to the old static probability system)
-			*/
+			/* Will give 1 when priority == 0, and lower probabilities the higher
+			 * the priority value is (similar to the old static probability system)
+			 */
 			return powf(0.75f, priority);
 	}
 	else if (fallback) {
@@ -180,11 +177,10 @@ static float get_probability(time_t date, float priority, bool fallback) {
 	else {
 		float x = diff/seconds;
 
-		/*
-		 This is the simplest polynomial with value 0 at 0, 1 at 1, and which has a
-		 first derivative of 0 at both 0 and 1 (we all love continuously differentiable
-		 functions, right?)
-		*/
+		/* This is the simplest polynomial with value 0 at 0, 1 at 1, and which has a
+		 * first derivative of 0 at both 0 and 1 (we all love continuously differentiable
+		 * functions, right?)
+		 */
 		return 3*x*x - 2*x*x*x;
 	}
 }

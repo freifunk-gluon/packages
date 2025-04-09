@@ -12,13 +12,13 @@
 
 
 const char * platforminfo_get_target(void) {
-        return STRINGIFY(TARGET);
+	return STRINGIFY(TARGET);
 }
 
 const char * platforminfo_get_subtarget(void) {
 #ifdef SUBTARGET
-        return STRINGIFY(SUBTARGET);
+	return STRINGIFY(SUBTARGET);
 #else
-        return NULL;
+	return NULL;
 #endif
 }

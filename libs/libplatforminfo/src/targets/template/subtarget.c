@@ -14,24 +14,24 @@ static char * model = NULL;
 
 
 __attribute__((constructor)) static void init(void) {
-        model = read_line("/tmp/sysinfo/model");
+	model = read_line("/tmp/sysinfo/model");
 }
 
 __attribute__((destructor)) static void deinit(void) {
-        free(model);
+	free(model);
 
-        model = NULL;
+	model = NULL;
 }
 
 
 const char * platforminfo_get_board_name(void) {
-        return NULL;
+	return NULL;
 }
 
 const char * platforminfo_get_model(void) {
-        return model;
+	return model;
 }
 
 const char * platforminfo_get_image_name(void) {
-        return STRINGIFY(TARGET) "-" STRINGIFY(SUBTARGET);
+	return STRINGIFY(TARGET) "-" STRINGIFY(SUBTARGET);
 }

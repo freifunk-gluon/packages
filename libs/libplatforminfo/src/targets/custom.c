@@ -12,30 +12,30 @@ static char * image_name = NULL;
 
 
 __attribute__((constructor)) static void init(void) {
-        board_name = read_line(BOARD_NAME);
-        model = read_line(MODEL);
-        image_name = read_line(IMAGE_NAME);
+	board_name = read_line(BOARD_NAME);
+	model = read_line(MODEL);
+	image_name = read_line(IMAGE_NAME);
 }
 
 __attribute__((destructor)) static void deinit(void) {
-        free(board_name);
-        free(model);
-        free(image_name);
+	free(board_name);
+	free(model);
+	free(image_name);
 
-        board_name = NULL;
-        model = NULL;
-        image_name = NULL;
+	board_name = NULL;
+	model = NULL;
+	image_name = NULL;
 }
 
 
 const char * platforminfo_get_board_name(void) {
-        return board_name;
+	return board_name;
 }
 
 const char * platforminfo_get_model(void) {
-        return model;
+	return model;
 }
 
 const char * platforminfo_get_image_name(void) {
-        return image_name;
+	return image_name;
 }

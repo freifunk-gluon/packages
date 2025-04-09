@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-        size_t socket_len = strlen(SSE_MULTIPLEX_SOCKET);
+	size_t socket_len = strlen(SSE_MULTIPLEX_SOCKET);
 	size_t len = offsetof(struct sockaddr_un, sun_path) + socket_len + 1;
 	uint8_t addrbuf[len];
 	memset(addrbuf, 0, len);

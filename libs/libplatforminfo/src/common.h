@@ -13,63 +13,63 @@
 
 
 __attribute__((unused)) static char * read_line(const char *filename) {
-        FILE *f = fopen(filename, "r");
-        if (!f)
-                return NULL;
+	FILE *f = fopen(filename, "r");
+	if (!f)
+		return NULL;
 
-        char *line = NULL;
-        size_t len = 0;
+	char *line = NULL;
+	size_t len = 0;
 
-        ssize_t r = getline(&line, &len, f);
+	ssize_t r = getline(&line, &len, f);
 
-        fclose(f);
+	fclose(f);
 
-        if (r >= 0) {
-                len = strlen(line);
+	if (r >= 0) {
+		len = strlen(line);
 
-                if (len && line[len-1] == '\n')
-                        line[len-1] = 0;
-        }
-        else {
-                free(line);
-                line = NULL;
-        }
+		if (len && line[len-1] == '\n')
+			line[len-1] = 0;
+	}
+	else {
+		free(line);
+		line = NULL;
+	}
 
-        return line;
+	return line;
 }
 
 __attribute__((unused)) static void sanitize_image_name(char **outp, char *in) {
-        if (!in) {
-                *outp = NULL;
-                return;
-        }
+	if (!in) {
+		*outp = NULL;
+		return;
+	}
 
-        char *out = malloc(strlen(in) + 1);
-        *outp = out;
+	char *out = malloc(strlen(in) + 1);
+	*outp = out;
 
-        bool dot = false, dash = false;
+	bool dot = false, dash = false;
 
-        for (; *in; in++) {
-                if (*in == '.') {
-                        dot = true;
-                        continue;
-                }
+	for (; *in; in++) {
+		if (*in == '.') {
+			dot = true;
+			continue;
+		}
 
-                if (*in != '+' && !isalnum(*in)) {
-                        dash = true;
-                        continue;
-                }
+		if (*in != '+' && !isalnum(*in)) {
+			dash = true;
+			continue;
+		}
 
-                if (dash)
-                        *out++ = '-';
-                else if (dot)
-                        *out++ = '.';
+		if (dash)
+			*out++ = '-';
+		else if (dot)
+			*out++ = '.';
 
-                dash = false;
-                dot = false;
+		dash = false;
+		dot = false;
 
-                *out++ = tolower(*in);
-        }
+		*out++ = tolower(*in);
+	}
 
-        *out = 0;
+	*out = 0;
 }

@@ -160,10 +160,9 @@ static struct json_object * merge_json(struct json_object *a, struct json_object
 }
 
 static const struct respondd_provider_info * get_providers(const char *filename) {
-	/*
-	  Prefix the filename with "./" to open the module in the current directory
-	  (dlopen looks in the standard library paths by default)
-	*/
+	/* Prefix the filename with "./" to open the module in the current directory
+	 * (dlopen looks in the standard library paths by default)
+	 */
 	char path[2 + strlen(filename) + 1];
 	snprintf(path, sizeof(path), "./%s", filename);
 
@@ -516,7 +515,7 @@ static const struct interface_info * find_multicast_interface(const struct group
  *     will be also sent immediately.
  */
 static void accept_request(struct request_schedule *schedule, int sock,
-                           const struct group_info *groups) {
+			   const struct group_info *groups) {
 	char input[REQUEST_MAXLEN];
 	ssize_t input_bytes;
 	struct sockaddr_in6 addr;
