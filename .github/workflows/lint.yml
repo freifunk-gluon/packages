@@ -30,3 +30,10 @@ jobs:
           fail_level: any
           check_all_files_with_shebangs: true
           filter_mode: nofilter
+
+  editorconfig:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: editorconfig-checker/action-editorconfig-checker@main
+      - run: editorconfig-checker

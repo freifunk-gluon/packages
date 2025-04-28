@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2016-2021 Leonardo Mörlein <git@irrelefant.net>
 // SPDX-License-Identifier: MIT License
+// SPDX-FileCopyrightText: 2016-2021 Leonardo Mörlein <git@irrelefant.net>
 #include <libubox/md5.h>
 
 #include <lua.h>

@@ -1,0 +1,39 @@
+# Top-most EditorConfig file
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+indent_style = tab
+charset = utf-8
+
+[*.dia]
+indent_style = space
+indent_size = 2
+
+[*{.json,.ecrc}]
+indent_style = space
+indent_size = 2
+
+[{Makefile,*.mk}]
+indent_style = unset
+
+[*.md]
+indent_style = space
+indent_size = 4
+
+[*.py]
+indent_style = space
+indent_size = 4
+
+[*.rst]
+indent_style = space
+indent_size = 2
+
+[*.yml]
+indent_style = space
+indent_size = 2
+
+[CMakeLists.txt]
+indent_style = space
+indent_size = 2

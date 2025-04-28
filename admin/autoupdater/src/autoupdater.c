@@ -1,28 +1,6 @@
-/*
-  Copyright (c) 2017, Matthias Schiffer <mschiffer@universe-factory.net>
-                      Jan-Philipp Litza <janphilipp@litza.de>
-  All rights reserved.
-
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions are met:
-
-    1. Redistributions of source code must retain the above copyright notice,
-       this list of conditions and the following disclaimer.
-    2. Redistributions in binary form must reproduce the above copyright notice,
-       this list of conditions and the following disclaimer in the documentation
-       and/or other materials provided with the distribution.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-FileCopyrightText: 2017 Matthias Schiffer <mschiffer@universe-factory.net>
+// SPDX-FileCopyrightText: 2017 Jan-Philipp Litza <janphilipp@litza.de>
 
 
 #include "manifest.h"
@@ -168,26 +146,23 @@ static float get_probability(time_t date, float priority, bool fallback) {
 	time_t diff = time(NULL) - date;
 
 	if (diff < 0) {
-		/*
-		 When the difference is negative, there are two possibilities: the
-		 manifest contains an incorrect date, or our own clock is wrong. As there
-		 isn't anything sensible to do for an incorrect manifest, we'll assume
-		 the latter is the case and update anyways as we can't do anything better
-		*/
+		/* When the difference is negative, there are two possibilities: the
+		 * manifest contains an incorrect date, or our own clock is wrong. As there
+		 * isn't anything sensible to do for an incorrect manifest, we'll assume
+		 * the latter is the case and update anyways as we can't do anything better
+		 */
 		fputs("autoupdater: warning: clock seems to be incorrect.\n", stderr);
 
 		if (get_uptime() < 600)
-			/*
-			 If the uptime is very low, it's possible we just didn't get the
-			 time over NTP yet, so we'll just wait until the next time the
-			 updater runs
-			*/
+			/* If the uptime is very low, it's possible we just didn't get the
+			 * time over NTP yet, so we'll just wait until the next time the
+			 * updater runs
+			 */
 			return 0;
 		else
-			/*
-			 Will give 1 when priority == 0, and lower probabilities the higher
-			 the priority value is (similar to the old static probability system)
-			*/
+			/* Will give 1 when priority == 0, and lower probabilities the higher
+			 * the priority value is (similar to the old static probability system)
+			 */
 			return powf(0.75f, priority);
 	}
 	else if (fallback) {
@@ -202,11 +177,10 @@ static float get_probability(time_t date, float priority, bool fallback) {
 	else {
 		float x = diff/seconds;
 
-		/*
-		 This is the simplest polynomial with value 0 at 0, 1 at 1, and which has a
-		 first derivative of 0 at both 0 and 1 (we all love continuously differentiable
-		 functions, right?)
-		*/
+		/* This is the simplest polynomial with value 0 at 0, 1 at 1, and which has a
+		 * first derivative of 0 at both 0 and 1 (we all love continuously differentiable
+		 * functions, right?)
+		 */
 		return 3*x*x - 2*x*x*x;
 	}
 }

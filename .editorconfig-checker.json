@@ -1,0 +1,8 @@
+{
+  "SpacesAfterTabs": true,
+  "Exclude": [
+    "net/ebtables-tiny",
+    "net/respondd/src/miniz.c",
+    "README.md"
+  ]
+}
