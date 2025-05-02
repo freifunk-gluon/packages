@@ -56,6 +56,11 @@ struct provider_list {
 	respondd_provider provider;
 };
 
+struct key_list {
+	struct key_list *next;
+	char *key;
+};
+
 struct request_type {
 	struct provider_list *providers;
 
@@ -79,6 +84,7 @@ struct request_schedule {
 
 static int64_t now;
 static struct hsearch_data htab;
+static struct key_list *keys;
 
 
 static struct json_object * merge_json(struct json_object *a, struct json_object *b);
@@ -249,6 +255,23 @@ static void load_cache_time(struct request_type *r, const char *name) {
 
 }
 
+static void add_key(const char *key) {
+	struct key_list **pos, *pentry;
+	int i = 0;
+
+	for (pos = &keys; *pos; pos = &(*pos)->next) {
+		if (strcmp(key, (*pos)->key) == 0)
+			return;
+		if (strcmp(key, (*pos)->key) < 0)
+			break;
+	}
+
+	pentry = malloc(sizeof(*pentry));
+	pentry->key = strdup(key);
+	pentry->next = *pos;
+	*pos = pentry;
+}
+
 static void add_provider(const char *name, const struct respondd_provider_info *provider) {
 	ENTRY key = {
 		.key = (char *)provider->request,
@@ -281,6 +304,31 @@ static void add_provider(const char *name, const struct respondd_provider_info *
 
 	pentry->next = *pos;
 	*pos = pentry;
+}
+
+static struct json_object *respondd_provider_providers(void) {
+	struct key_list **pos;
+	struct json_object *provider;
+	struct json_object *ret = json_object_new_array();
+
+	if (!ret)
+		return NULL;
+
+	for (pos = &keys; *pos; pos = &(*pos)->next) {
+		provider = json_object_new_string((*pos)->key);
+		json_object_array_add(ret, provider);
+	}
+
+	return ret;
+}
+
+static void add_providers_provider(void) {
+	const struct respondd_provider_info providers[] = {
+		{"respondd-providers", respondd_provider_providers},
+		{}
+	};
+
+	add_provider("respondd", providers);
 }
 
 static void load_providers(const char *path) {
@@ -316,9 +364,13 @@ static void load_providers(const char *path) {
 		if (!providers)
 			continue;
 
-		for (; providers->request; providers++)
+		for (; providers->request; providers++) {
 			add_provider(ent->d_name, providers);
+			add_key(providers->request);
+		}
 	}
+
+	add_providers_provider();
 
 	closedir(dir);
 
