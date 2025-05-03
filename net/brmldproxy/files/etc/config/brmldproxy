@@ -1,0 +1,20 @@
+#config brmldproxy 'lan'
+#	option disabled '1'
+#	# The bridge to apply brmldproxy to. Either the
+#	# bridge interface name or the UCI network interface
+#	# section name.
+#	option bridge 'lan'
+#	# Currently only "ipv6" is supported, optional.
+#	option family 'ipv6'
+#	# bridge port to proxy to
+#	list proxiedport 'wan0'
+#	# bridge port to proxy from
+#	list includedport 'lan0'
+#	# bridge port to exclude from proxying
+#	list excludedport 'lan1'
+#	# multicast IP address (range) to exclude from proxying
+#	list excludefilter 'ff00::/ff0e::'
+#	list excludefilter 'ff0e::/64'
+#	# multicast IP address (range) to include in proxying
+#	# (includes ff0e::123 even though ff0e::/64 was excluded above)
+#	list includefilter 'ff0e::123'
