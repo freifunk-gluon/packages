@@ -50,6 +50,7 @@ struct recv_manifest_ctx {
 struct recv_image_ctx {
 	int fd;
 	ecdsa_sha256_context_t hash_ctx;
+	ssize_t downloaded;
 };
 
 
@@ -222,6 +223,32 @@ static void recv_manifest_cb(struct uclient *cl) {
 	}
 }
 
+/** Updates the "XX.X / XX.X MiB" progress display  */
+static void update_progress(struct recv_image_ctx *ctx, ssize_t downloaded, ssize_t length)
+{
+	/* Numbers in 0.1 MiB units */
+	ssize_t downloaded_01_mib = ((downloaded / 1024) * 10) / 1024;
+	ssize_t length_01_mib = ((length / 1024) * 10) / 1024;
+
+	if (downloaded_01_mib == ctx->downloaded)
+		return;
+
+	ctx->downloaded = downloaded_01_mib;
+
+	/* Integer and 1 digit fractional part in 1 MiB units */
+	ssize_t downloaded_mib = downloaded_01_mib / 10;
+	int downloaded_mib_frac = downloaded_01_mib % 10;
+	ssize_t length_mib = length_01_mib / 10;
+	int length_mib_frac = length_01_mib % 10;
+
+	printf(
+		"\rDownloading image: % 3zi.%i / %zi.%i MiB",
+		downloaded_mib, downloaded_mib_frac,
+		length_mib, length_mib_frac
+	);
+	fflush(stdout);
+}
+
 
 /** Receives data from uclient and writes it to file */
 static void recv_image_cb(struct uclient *cl) {
@@ -234,12 +261,7 @@ static void recv_image_cb(struct uclient *cl) {
 		if (len <= 0)
 			return;
 
-		printf(
-			"\rDownloading image: % 5zi / %zi KiB",
-			uclient_data(cl)->downloaded / 1024,
-			uclient_data(cl)->length / 1024
-		);
-		fflush(stdout);
+		update_progress(ctx, uclient_data(cl)->downloaded, uclient_data(cl)->length);
 
 		if (write(ctx->fd, buf, len) < len) {
 			fputs("autoupdater: error: downloading firmware image failed: ", stderr);
@@ -323,7 +345,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	/* Begin download of the image */
 	run_dir(download_d_dir);
 
-	struct recv_image_ctx image_ctx = { };
+	struct recv_image_ctx image_ctx = { .downloaded = -1 };
 	image_ctx.fd = open(firmware_path, O_WRONLY|O_CREAT, 0600);
 	if (image_ctx.fd < 0) {
 		fprintf(stderr, "autoupdater: error: failed opening firmware file %s\n", firmware_path);
