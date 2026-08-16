@@ -66,7 +66,7 @@ local function locate(blacklist)
 
 	assert(#found_bssids >= 12, 'insufficient BSSIDs found')
 
-	local data = receive_json('http://openwifi.su/api/v1/bssids/' .. table.concat(found_bssids, ','))
+	local data = receive_json('https://openwifi.su/api/v1/bssids/' .. table.concat(found_bssids, ','))
 	assert(type(data) == 'table' and data.lon and data.lat, 'location not available')
 
 	return data
