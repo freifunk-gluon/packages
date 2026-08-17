@@ -7,6 +7,20 @@ local function canon_bssid(bssid)
 	return bssid:upper():gsub(':', '')
 end
 
+-- wget (uclient-fetch) can only do HTTPS if one of the libustream-ssl
+-- backends is installed; on flash-constrained devices,
+-- it may have been left out of the image
+local function has_ssl_support()
+	for _, path in ipairs({'/usr/lib/libustream-ssl.so', '/lib/libustream-ssl.so'}) do
+		local f = io.open(path, 'r')
+		if f then
+			f:close()
+			return true
+		end
+	end
+	return false
+end
+
 -- Iterates over all active WLAN interfaces
 -- Returning true from the callback function will skip all remaining
 -- interfaces of the same radio
@@ -66,7 +80,8 @@ local function locate(blacklist)
 
 	assert(#found_bssids >= 12, 'insufficient BSSIDs found')
 
-	local data = receive_json('https://openwifi.su/api/v1/bssids/' .. table.concat(found_bssids, ','))
+	local scheme = has_ssl_support() and 'https' or 'http'
+	local data = receive_json(scheme .. '://openwifi.su/api/v1/bssids/' .. table.concat(found_bssids, ','))
 	assert(type(data) == 'table' and data.lon and data.lat, 'location not available')
 
 	return data
