@@ -399,6 +399,28 @@ static int download_and_verify_image(const char *mirror, struct settings *s, str
 	return 0;
 }
 
+static int download_and_verify_images(const char *mirror, struct settings *s, struct manifest *m,
+				      int *interrupted) {
+	int ret;
+
+	if (!m->n_mirrors)
+		return download_and_verify_image(mirror, s, m, interrupted);
+
+	/* mirrors in manifest files replace mirrors from CLI or UCI */
+	for (size_t i = 0; i < m->n_mirrors; i++) {
+		mirror = m->mirrors[i];
+		if (!mirror)
+			continue;
+
+		ret = download_and_verify_image(mirror, s, m, interrupted);
+		/* success */
+		if (!ret)
+			return ret;
+	}
+
+	return -ENOENT;
+}
+
 
 static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	struct manifest m = { 0 };
@@ -411,7 +433,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 		goto out;
 
 	/**** Download and verify image file *********************************/
-	ret = download_and_verify_image(mirror, s, &m, &interrupted);
+	ret = download_and_verify_images(mirror, s, &m, &interrupted);
 	if (ret)
 		goto fail_after_download;
 
