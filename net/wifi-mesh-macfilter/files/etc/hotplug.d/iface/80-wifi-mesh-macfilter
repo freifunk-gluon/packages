@@ -1,0 +1,27 @@
+#!/bin/sh
+
+local MODE
+local POLICY
+local IW_POLICY
+local MAC
+local MACLIST
+
+[[ "$ACTION" != ifup ]] && exit 0;
+
+. /lib/functions.sh
+config_load "wireless"
+
+config_get MODE $INTERFACE mode
+[[ $MODE != mesh ]] && exit 0;
+
+config_get POLICY $INTERFACE macfilter
+case $POLICY in
+	deny)	IW_POLICY="block";;
+	allow)	IW_POLICY="open"; iw dev $DEVICE set mesh_param mesh_auto_open_plinks=0;;
+	*)		exit 0;;
+esac
+
+config_get MACLIST $INTERFACE maclist
+for MAC in $MACLIST; do
+	iw dev $DEVICE station set $MAC plink_action $IW_POLICY
+done
