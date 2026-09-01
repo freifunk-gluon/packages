@@ -70,7 +70,7 @@ root@platzhalter-525400123456:~# ubus call wgpeerselector.wg_mesh status
 Algorithm:
 ----------
 
-A connection is considered as "established" if the latest handshakes was
+A connection is considered as "established" if the latest handshake was
 within the last 2.5 minutes.
 
 Installing a peer:
@@ -92,7 +92,7 @@ Main Loop:
 
 Picking peers is done in such a way that all peers are tried once
 before one peer is attempted for the second time. The same goes for the
-DNS resolultion of the endpoints.
+DNS resolution of the endpoints.
 
 Warning: This algorithm only works if something is causing traffic into
 the wireguard interface. This is due to the fact, that wireguard is only
