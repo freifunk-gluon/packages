@@ -45,6 +45,7 @@ struct recv_manifest_ctx {
 	struct manifest m;
 	char buf[MAX_LINE_LENGTH + 1];
 	char *ptr;
+	int (*read_cb)(struct recv_manifest_ctx *ctx, struct uclient *cl);
 };
 
 struct recv_image_ctx {
@@ -187,9 +188,25 @@ static float get_probability(time_t date, float priority, bool fallback) {
 }
 
 
+static int read_stdin_manifest_cb(struct recv_manifest_ctx *ctx, struct uclient *cl) {
+	size_t ret;
+
+	if (feof(stdin))
+		return 0;
+
+	ret = fread(ctx->ptr, 1, MAX_LINE_LENGTH - (ctx->ptr - ctx->buf), stdin);
+	if (ferror(stdin))
+		return -EINVAL;
+
+	return ret;
+}
+
+static int read_uclient_manifest_cb(struct recv_manifest_ctx *ctx, struct uclient *cl) {
+	return uclient_read_account(cl, ctx->ptr, MAX_LINE_LENGTH - (ctx->ptr - ctx->buf));
+}
+
 /** Receives data from uclient, chops it to lines and hands it to \ref parse_line */
-static void recv_manifest_cb(struct uclient *cl) {
-	struct recv_manifest_ctx *ctx = uclient_get_custom(cl);
+static void recv_manifest_cb(struct recv_manifest_ctx *ctx, struct uclient *cl) {
 	char *newline;
 	int len;
 
@@ -198,7 +215,7 @@ static void recv_manifest_cb(struct uclient *cl) {
 			fputs("autoupdater: error: encountered manifest line exceeding limit of " STRINGIFY(MAX_LINE_LENGTH) " characters\n", stderr);
 			break;
 		}
-		len = uclient_read_account(cl, ctx->ptr, MAX_LINE_LENGTH - (ctx->ptr - ctx->buf));
+		len = ctx->read_cb(ctx, cl);
 		if (len <= 0)
 			break;
 		ctx->ptr[len] = '\0';
@@ -221,6 +238,12 @@ static void recv_manifest_cb(struct uclient *cl) {
 		memmove(ctx->buf, line, n);
 		ctx->ptr = ctx->buf + n;
 	}
+}
+
+static void recv_uclient_manifest_cb(struct uclient *cl) {
+	struct recv_manifest_ctx *ctx = uclient_get_custom(cl);
+
+	recv_manifest_cb(ctx, cl);
 }
 
 /** Updates the "XX.X / XX.X MiB" progress display  */
@@ -283,14 +306,26 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	/**** Get and check manifest *****************************************/
 	/* Construct manifest URL */
 	char manifest_url[strlen(mirror) + strlen(s->branch) + 11];
-	sprintf(manifest_url, "%s/%s.manifest", mirror, s->branch);
+	if (!strcmp(mirror, "-"))
+		sprintf(manifest_url, "-");
+	else
+		sprintf(manifest_url, "%s/%s.manifest", mirror, s->branch);
 
 
 	printf("Retrieving manifest from %s ...\n", manifest_url);
 
 	/* Download manifest */
 	ecdsa_sha256_init(&m->hash_ctx);
-	int err_code = get_url(manifest_url, recv_manifest_cb, &manifest_ctx, -1, s->old_version);
+	int err_code = 0;
+	/* via stdin */
+	if (!strcmp(mirror, "-")) {
+		manifest_ctx.read_cb = read_stdin_manifest_cb;
+		recv_manifest_cb(&manifest_ctx, NULL);
+	/* via HTTP */
+	} else {
+		manifest_ctx.read_cb = read_uclient_manifest_cb;
+		err_code = get_url(manifest_url, recv_uclient_manifest_cb, &manifest_ctx, -1, s->old_version);
+	}
 	if (err_code != 0) {
 		fprintf(stderr, "autoupdater: warning: error downloading manifest: %s\n", uclient_get_errmsg(err_code));
 		interrupted = uclient_interrupted_signal(err_code);
