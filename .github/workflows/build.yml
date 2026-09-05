@@ -1,0 +1,46 @@
+---
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build:
+    name: ${{ matrix.arch }} build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Build
+        uses: openwrt/gh-action-sdk@v11
+        env:
+          ARCH: ${{ matrix.arch }}
+          FEEDNAME: gluon
+          BUILD_LOG: 1
+          V: s
+
+      - name: Store packages
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.arch }}-packages
+          path: |
+            bin/packages/${{ matrix.arch }}/**/*.ipk
+            bin/packages/${{ matrix.arch }}/**/*.apk
+
+      - name: Store logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.arch }}-logs
+          path: logs/
