@@ -25,12 +25,12 @@
 prefix=/usr
 exec_prefix=/usr
 libdir=${exec_prefix}/lib
-includedir=${prefix}/include/gluon-mesh-olsrd
+includedir=${prefix}/include/libolsrdhelper
 
 Name: libolsrdhelper
 Version: 1
 Description: olsr helper functions library
 Requires.private: json-c
-Libs: -luclient -lolsrdhelper -L${libdir} -lgluonutil
+Libs: -luclient -lolsrdhelper -L${libdir}
 Libs.private:
 Cflags: -I${includedir}

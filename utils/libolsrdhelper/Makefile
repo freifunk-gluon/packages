@@ -17,7 +17,7 @@ define Package/libolsrdhelper
     +lua-jsonc
 endef
 
-define Package/gluon-mesh-olsrd/install
+define Package/libolsrdhelper/install
 	$(INSTALL_DIR) $(1)/usr/lib/lua/gluon
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/olsrd.so $(1)/usr/lib/lua/gluon/
 	$(INSTALL_DIR) $(1)/usr/lib/
@@ -30,11 +30,12 @@ define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/lib/
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/libolsrdhelper.so $(1)/usr/lib/
 
-	$(INSTALL_DIR) $(1)/usr/include/gluon-mesh-olsrd
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/lib/libolsrdhelper.h $(1)/usr/include/gluon-mesh-olsrd/
+	$(INSTALL_DIR) $(1)/usr/include/libolsrdhelper
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/lib/libolsrdhelper.h $(1)/usr/include/libolsrdhelper/
 	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig/
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/lib/libolsrdhelper.pc $(1)/usr/lib/pkgconfig/
 endef
 
 
-$(eval $(call BuildPackageGluon,gluon-mesh-olsrd))
+$(eval $(call BuildPackage,libbabelhelper))
+
