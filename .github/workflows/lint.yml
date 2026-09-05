@@ -3,6 +3,9 @@ name: Lint
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
+      - 'v20*'
   pull_request:
     types: [opened, synchronize, reopened]
 
