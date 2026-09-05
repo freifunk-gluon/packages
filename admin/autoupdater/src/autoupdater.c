@@ -30,6 +30,7 @@
 
 
 #define MAX_LINE_LENGTH 512
+#define MAX_MANIFEST_SIZE (1024*512)
 #define STRINGIFY(str) #str
 
 static const char *const download_d_dir = "/usr/lib/autoupdater/download.d";
@@ -37,6 +38,7 @@ static const char *const abort_d_dir = "/usr/lib/autoupdater/abort.d";
 static const char *const upgrade_d_dir = "/usr/lib/autoupdater/upgrade.d";
 static const char *const lockfile = "/var/lock/autoupdater.lock";
 static const char *const firmware_path = "/tmp/firmware.bin";
+static const char *const manifest_path = "/tmp/manifest.txt";
 static const char *const sysupgrade_path = "/sbin/sysupgrade";
 
 
@@ -45,6 +47,8 @@ struct recv_manifest_ctx {
 	struct manifest m;
 	char buf[MAX_LINE_LENGTH + 1];
 	char *ptr;
+	int fd;
+	unsigned int total_len;
 };
 
 struct recv_image_ctx {
@@ -201,6 +205,20 @@ static void recv_manifest_cb(struct uclient *cl) {
 		len = uclient_read_account(cl, ctx->ptr, MAX_LINE_LENGTH - (ctx->ptr - ctx->buf));
 		if (len <= 0)
 			break;
+
+		ctx->total_len += len;
+		if (ctx->total_len > MAX_MANIFEST_SIZE) {
+			fprintf(stderr, "autoupdater: error: manifest file size %u exceeded %i bytes\n",
+				ctx->total_len, MAX_MANIFEST_SIZE);
+			break;
+		}
+
+		if (write(ctx->fd, ctx->ptr, len) < len) {
+			fprintf(stderr, "autoupdater: error: saving manifest to %s failed: ", manifest_path);
+			perror(NULL);
+			break;
+		}
+
 		ctx->ptr[len] = '\0';
 
 		char *line = ctx->buf;
@@ -285,6 +303,11 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	char manifest_url[strlen(mirror) + strlen(s->branch) + 11];
 	sprintf(manifest_url, "%s/%s.manifest", mirror, s->branch);
 
+	manifest_ctx.fd = creat(manifest_path, 0600);
+	if (manifest_ctx.fd < 0) {
+		fprintf(stderr, "autoupdater: error: failed opening manifest file %s\n", manifest_path);
+		goto out;
+	}
 
 	printf("Retrieving manifest from %s ...\n", manifest_url);
 
@@ -294,8 +317,10 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	if (err_code != 0) {
 		fprintf(stderr, "autoupdater: warning: error downloading manifest: %s\n", uclient_get_errmsg(err_code));
 		interrupted = uclient_interrupted_signal(err_code);
+		close(manifest_ctx.fd);
 		goto out;
 	}
+	close(manifest_ctx.fd);
 
 	/* Check manifest signatures */
 	{
@@ -404,8 +429,10 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	if (s->no_action) {
 		printf(
 			"autoupdater: info: Aborting successful upgrade because simulation was requested.\n"
-			"autoupdater: info: You can find the firmware file in %s\n",
-			firmware_path
+			"autoupdater: info: You can find the firmware file in %s\n"
+			"autoupdater: info: You can find the manifest file in %s\n",
+			firmware_path,
+			manifest_path
 		);
 		run_dir(abort_d_dir);
 		ret = true;
