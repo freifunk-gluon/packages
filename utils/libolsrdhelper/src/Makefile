@@ -1,28 +1,20 @@
-CFLAGS += -Wall -D_GNU_SOURCE -g
+CFLAGS += -Wall -D_GNU_SOURCE
 
-ifeq ($(origin PKG_CONFIG), undefined)
-  PKG_CONFIG = pkg-config
-  ifeq ($(shell which $(PKG_CONFIG) 2>/dev/null),)
-    $(error $(PKG_CONFIG) not found)
-  endif
-endif
+PKG_CONFIG ?= pkg-config
 
-CFLAGS += $(shell pkg-config --cflags json-c)
-LDFLAGS += $(shell pkg-config --libs json-c)
+CFLAGS += $(shell $(PKG_CONFIG) --cflags json-c olsr-macd)
+LDLIBS += $(shell $(PKG_CONFIG) --libs json-c)
 
 SOURCES_HELPER = libolsrdhelper.c neigh.c uclient.c
 FILES_HELPER = $(SOURCES_HELPER) libolsrdhelper.h uclient.h
 
-SOURCES_LUA = lua-olsrd.c
-FILES_LUA = $(SOURCES_LUA)
-
-all: olsrd.so libolsrdhelper.so
+all: libolsrdhelper.so olsrd.so
 
 libolsrdhelper.so: $(FILES_HELPER)
-	$(CC) $(CFLAGS) $(LDFLAGS) -shared -fPIC -o $@ $(SOURCES_HELPER) $(LDLIBS) -lgluonutil -luclient
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -shared -fPIC -o $@ $(SOURCES_HELPER) $(LDLIBS) -lubox -luclient
 
-olsrd.so: libolsrdhelper.so $(FILES_LUA)
-	$(CC) $(LUA_CFLAGS) $(CFLAGS) $(LDFLAGS) -L. -shared -fPIC -o $@ $(SOURCES_LUA) $(LDLIBS) -lgluonutil -lolsrdhelper -llua-jsonc
+olsrd.so: libolsrdhelper.so lua-olsrd.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -L. -shared -fPIC -o $@ lua-olsrd.c $(LDLIBS) -lolsrdhelper -llua-jsonc
 
 clean:
-	rm -f *.so *.o
+	rm -f *.so

@@ -9,7 +9,7 @@
 #include <lauxlib.h>
 #include <lua-jsonc.h>
 
-#include <libolsrdhelper.h>
+#include "libolsrdhelper.h"
 
 #define OLSRD "gluon.olsrd"
 
@@ -83,10 +83,18 @@ static void push_daemon (lua_State *L, const struct olsr_daemon_info *daemon, co
 	lua_setfield(L, -2, name);
 }
 
+/* get_info(site) with the site config as a table, site() from gluon.site */
 static int lua_get_info (lua_State *L) {
-	struct olsr_info info;
+	luaL_checktype(L, 1, LUA_TTABLE);
 
-	if (olsr_get_info(&info))
+	json_object *site = lua_jsonc_tojson(L, 1);
+
+	struct olsr_info info;
+	int err = olsr_get_info(site, &info);
+
+	json_object_put(site);
+
+	if (err)
 		return luaL_error(L, "get_info() failed");
 
 	lua_newtable(L);

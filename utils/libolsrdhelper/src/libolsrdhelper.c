@@ -136,8 +136,6 @@ static bool success_exit(const char *cmd, ...) {
 	return WIFEXITED(status) && WEXITSTATUS(status) == 0;
 }
 
-/* prefix4 enables olsrd, prefix6 enables olsrd6 */
-/* site = gluonutil_load_site_config(); */
 int olsr_get_info(json_object *site, struct olsr_info *out) {
 	if (!site)
 		return 1;
@@ -162,8 +160,6 @@ int olsr_get_info(json_object *site, struct olsr_info *out) {
 		out->olsr6.enabled = true;
 		out->olsr6.running = success_exit("/etc/init.d/olsrd6", "running", NULL);
 	}
-
-	json_object_put(site);
 
 	return 0;
 }

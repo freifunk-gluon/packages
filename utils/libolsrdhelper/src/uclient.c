@@ -20,9 +20,9 @@ static const char *const user_agent = "olsrdhelper (libuclient)";
 
 
 const char *uclient_get_errmsg(int code) {
-	static char http_code_errmsg[16];
+	static char http_code_errmsg[32];
 	if (code & UCLIENT_ERROR_STATUS_CODE) {
-		snprintf(http_code_errmsg, 16, "HTTP error %d",
+		snprintf(http_code_errmsg, sizeof(http_code_errmsg), "HTTP error %d",
 			code & (~UCLIENT_ERROR_STATUS_CODE));
 		return http_code_errmsg;
 	}

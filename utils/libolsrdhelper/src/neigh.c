@@ -57,12 +57,7 @@ static void merge_neighs(json_object *out, json_object *neighs, const char *name
 	}
 }
 
-json_object * olsr_get_merged_neighs(void) {
-	struct olsr_info info;
-
-	if (olsr_get_info(&info))
-		return NULL;
-
+json_object * olsr_get_merged_neighs(const struct olsr_info *info) {
 	json_object *out = json_object_new_object();
 	if (!out)
 		return NULL;
@@ -72,7 +67,7 @@ json_object * olsr_get_merged_neighs(void) {
 	for (size_t i = 0; i < sizeof(families) / sizeof(families[0]); i++) {
 		int ipv = families[i];
 
-		if (!olsr_daemon(&info, ipv)->running)
+		if (!olsr_daemon(info, ipv)->running)
 			continue;
 
 		json_object *neighs = olsr_get_neigh(ipv);

@@ -23,7 +23,7 @@ struct olsr_info {
 };
 
 /** daemon of the address family, NULL if unknown */
-static inline struct olsr_daemon_info * olsr_daemon(struct olsr_info *info, int ipv) {
+static inline const struct olsr_daemon_info * olsr_daemon(const struct olsr_info *info, int ipv) {
 	switch (ipv) {
 	case OLSR_IPV4:
 		return &info->olsr4;
@@ -39,12 +39,13 @@ static inline const char * olsr_name(int ipv) {
 	return ipv == OLSR_IPV4 ? "olsr4" : "olsr6";
 }
 
-int olsr_get_info(struct olsr_info *out);
+/* site is the gluon site config, prefix4 enables olsrd and prefix6 olsrd6, the caller keeps its reference */
+int olsr_get_info(json_object *site, struct olsr_info *out);
 
 int olsr_get_nodeinfo(int ipv, const char *path, json_object **out);
 
 struct json_object * olsr_get_neigh(int ipv);
-struct json_object * olsr_get_merged_neighs(void);
+struct json_object * olsr_get_merged_neighs(const struct olsr_info *info);
 
 // generic socket helpers
 
