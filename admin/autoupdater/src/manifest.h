@@ -25,8 +25,10 @@ struct manifest {
 	ssize_t imagesize;
 
 	size_t n_signatures;
+	size_t n_mirrors;
 	ecdsa_signature_t **signatures;
 	ecdsa_sha256_context_t hash_ctx;
+	char **mirrors;
 };
 
 

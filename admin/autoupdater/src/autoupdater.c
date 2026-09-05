@@ -14,6 +14,7 @@
 #include <ecdsautil/ecdsa.h>
 #include <ecdsautil/sha256.h>
 
+#include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <math.h>
@@ -42,7 +43,7 @@ static const char *const sysupgrade_path = "/sbin/sysupgrade";
 
 struct recv_manifest_ctx {
 	struct settings *s;
-	struct manifest m;
+	struct manifest *m;
 	char buf[MAX_LINE_LENGTH + 1];
 	char *ptr;
 };
@@ -210,7 +211,7 @@ static void recv_manifest_cb(struct uclient *cl) {
 				break;
 			*newline = '\0';
 
-			parse_line(line, &ctx->m, ctx->s->branch, platforminfo_get_image_name());
+			parse_line(line, ctx->m, ctx->s->branch, platforminfo_get_image_name());
 			line = newline + 1;
 		}
 
@@ -272,19 +273,14 @@ static void recv_image_cb(struct uclient *cl) {
 	}
 }
 
-
-static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
-	bool ret = false;
-	struct recv_manifest_ctx manifest_ctx = { .s = s };
+static int download_and_verify_manifest(const char *mirror, struct settings *s, struct manifest *m,
+					int *interrupted) {
+	struct recv_manifest_ctx manifest_ctx = { .s = s, .m = m };
 	manifest_ctx.ptr = manifest_ctx.buf;
-	struct manifest *m = &manifest_ctx.m;
-	int interrupted = 0;
 
-	/**** Get and check manifest *****************************************/
 	/* Construct manifest URL */
 	char manifest_url[strlen(mirror) + strlen(s->branch) + 11];
 	sprintf(manifest_url, "%s/%s.manifest", mirror, s->branch);
-
 
 	printf("Retrieving manifest from %s ...\n", manifest_url);
 
@@ -293,8 +289,8 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	int err_code = get_url(manifest_url, recv_manifest_cb, &manifest_ctx, -1, s->old_version);
 	if (err_code != 0) {
 		fprintf(stderr, "autoupdater: warning: error downloading manifest: %s\n", uclient_get_errmsg(err_code));
-		interrupted = uclient_interrupted_signal(err_code);
-		goto out;
+		*interrupted = uclient_interrupted_signal(err_code);
+		return -EINVAL;
 	}
 
 	/* Check manifest signatures */
@@ -308,40 +304,42 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 		long unsigned int good_signatures = ecdsa_verify_list_legacy(ctxs, m->n_signatures, s->pubkeys, s->n_pubkeys);
 		if (good_signatures < s->good_signatures) {
 			fprintf(stderr, "autoupdater: warning: manifest %s only carried %lu valid signatures, %lu are required\n", manifest_url, good_signatures, s->good_signatures);
-			goto out;
+			return -EINVAL;
 		}
 	}
 
 	/* Check manifest */
 	if (!m->date_ok || !m->priority_ok) {
 		fprintf(stderr, "autoupdater: warning: manifest is missing mandatory fields\n");
-		goto out;
+		return -EINVAL;
 	}
 
 	if (!m->branch_ok) {
 		fprintf(stderr, "autoupdater: warning: manifest %s is not for branch %s\n", manifest_url, s->branch);
-		goto out;
+		return -EINVAL;
 	}
 
 	if (!m->model_ok) {
 		fprintf(stderr, "autoupdater: warning: no matching firmware found (model %s)\n", platforminfo_get_image_name());
-		goto out;
+		return -EINVAL;
 	}
 
 	/* Check version and update probability */
 	if (!newer_than(m->version, s->old_version) && !s->force_version) {
 		puts("No new firmware available.");
-		ret = true;
-		goto out;
+		return -EAGAIN;
 	}
 
 	if (!s->force && random() >= RAND_MAX * get_probability(m->date, m->priority, s->fallback)) {
 		fputs("autoupdater: info: no autoupdate this time. Use -f to override.\n", stderr);
-		ret = true;
-		goto out;
+		return -EAGAIN;
 	}
 
-	/**** Download and verify image file *********************************/
+	return 0;
+}
+
+static int download_and_verify_image(const char *mirror, struct settings *s, struct manifest *m,
+				     int *interrupted) {
 	/* Begin download of the image */
 	run_dir(download_d_dir);
 
@@ -349,7 +347,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 	image_ctx.fd = open(firmware_path, O_WRONLY|O_CREAT, 0600);
 	if (image_ctx.fd < 0) {
 		fprintf(stderr, "autoupdater: error: failed opening firmware file %s\n", firmware_path);
-		goto fail_after_download;
+		return -EINVAL;
 	}
 
 	/* Download image and calculate SHA256 checksum */
@@ -361,9 +359,9 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 		puts("");
 		if (err_code != 0) {
 			fprintf(stderr, "autoupdater: warning: error downloading image: %s\n", uclient_get_errmsg(err_code));
-			interrupted = uclient_interrupted_signal(err_code);
+			*interrupted = uclient_interrupted_signal(err_code);
 			close(image_ctx.fd);
-			goto fail_after_download;
+			return -EINVAL;
 		}
 	}
 	close(image_ctx.fd);
@@ -374,7 +372,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 		ecdsa_sha256_final(&image_ctx.hash_ctx, hash.p);
 		if (memcmp(hash.p, m->image_hash, ECDSA_SHA256_HASH_SIZE)) {
 			fputs("autoupdater: warning: invalid image checksum!\n", stderr);
-			goto fail_after_download;
+			return -EINVAL;
 		}
 	}
 
@@ -394,11 +392,52 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 		const int sysupgrade_ret = system(buf);
 		if (WEXITSTATUS(sysupgrade_ret) != 0 ) {
 			fprintf(stderr, "autoupdater: warning: sysupgrade --test failed with return code: %d\n", WEXITSTATUS(sysupgrade_ret));
-			goto fail_after_download;
+			return -EINVAL;
 		}
 	}
 
-	clear_manifest(m);
+	return 0;
+}
+
+static int download_and_verify_images(const char *mirror, struct settings *s, struct manifest *m,
+				      int *interrupted) {
+	int ret;
+
+	if (!m->n_mirrors)
+		return download_and_verify_image(mirror, s, m, interrupted);
+
+	/* mirrors in manifest files replace mirrors from CLI or UCI */
+	for (size_t i = 0; i < m->n_mirrors; i++) {
+		mirror = m->mirrors[i];
+		if (!mirror)
+			continue;
+
+		ret = download_and_verify_image(mirror, s, m, interrupted);
+		/* success */
+		if (!ret)
+			return ret;
+	}
+
+	return -ENOENT;
+}
+
+
+static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
+	struct manifest m = { 0 };
+	int interrupted = 0;
+	int ret;
+
+	/**** Get and check manifest *****************************************/
+	ret = download_and_verify_manifest(mirror, s, &m, &interrupted);
+	if (ret)
+		goto out;
+
+	/**** Download and verify image file *********************************/
+	ret = download_and_verify_images(mirror, s, &m, &interrupted);
+	if (ret)
+		goto fail_after_download;
+
+	clear_manifest(&m);
 
 	/**** Call sysupgrade ************************************************/
 	if (s->no_action) {
@@ -408,7 +447,6 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 			firmware_path
 		);
 		run_dir(abort_d_dir);
-		ret = true;
 		goto out;
 	}
 
@@ -422,6 +460,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 
 	/* execl() shouldn't return */
 	fputs("autoupdater: error: failed to call sysupgrade\n", stderr);
+	ret = -EINVAL;
 
 	fcntl(lock_fd, F_SETFD, FD_CLOEXEC);
 
@@ -430,7 +469,7 @@ fail_after_download:
 	run_dir(abort_d_dir);
 
 out:
-	clear_manifest(m);
+	clear_manifest(&m);
 
 	/* If we were interrupted by a signal, restore original signal handlers
 	 * and re-raise signal to terminate process */
@@ -439,7 +478,10 @@ out:
 		raise(interrupted);
 	}
 
-	return ret;
+	if (!ret || ret == -EAGAIN)
+		return true;
+	else
+		return false;
 }
 
 
