@@ -11,7 +11,7 @@ jobs:
     name: Lua
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Dependencies
         run: sudo apt-get install lua-check
       - name: Lint Lua
@@ -21,11 +21,11 @@ jobs:
     name: Shell
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: shellcheck
         # Make sure the action is pinned to a commit, as all reviewdog repos
         # have hundreds of contributors with write access (breaks easy/often)
-        uses: reviewdog/action-shellcheck@5ebd09ddbe2ebb471646ce234c6c8dd18663ca7c  # v1.30.0
+        uses: reviewdog/action-shellcheck@0722bbdb0d47f04c1b53b8734d2422ac63a45ec6  # v1.32.1
         with:
           fail_level: any
           check_all_files_with_shebangs: true
@@ -34,6 +34,6 @@ jobs:
   editorconfig:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: editorconfig-checker/action-editorconfig-checker@main
       - run: editorconfig-checker
