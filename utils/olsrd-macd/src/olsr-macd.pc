@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2021-2023 Maciej Krüger <maciej@xeredo.it>
+# SPDX-License-Identifier: BSD-2-Clause
+
+prefix=/usr
+includedir=${prefix}/include/olsr-macd
+
+Name: olsr-macd
+Version: 1
+Description: olsr-macd socket protocol
+Cflags: -I${includedir}
