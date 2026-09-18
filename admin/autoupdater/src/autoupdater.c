@@ -30,7 +30,8 @@
 
 
 #define MAX_LINE_LENGTH 512
-#define STRINGIFY(str) #str
+#define STRINGIFY_(str) #str
+#define STRINGIFY(str) STRINGIFY_(str)
 
 static const char *const download_d_dir = "/usr/lib/autoupdater/download.d";
 static const char *const abort_d_dir = "/usr/lib/autoupdater/abort.d";
