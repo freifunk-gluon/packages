@@ -376,7 +376,7 @@ static struct json_object * single_request(char *type) {
 /**
  * Calls single_request() for each query type and merges the results
  *
- * @types: String with space seperated list of types. E.g. "type1 type2"
+ * @types: String with space separated list of types. E.g. "type1 type2"
  *
  * Returns: The json structure is { "type1": {...}, "type2": {...} }
  */

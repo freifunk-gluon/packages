@@ -6,7 +6,7 @@ respondd is a server distributing information within a network.
 For doing so, respondd spawns a UDP socket (in Gluon 1001/udp), optionally joining a multicast group. When a request is received, the information requested is transmitted to the requester.
 
 All information is organized in a non-hierarchical namespace. Each entry identifies a *request name* (e.g. `statistics`, `nodeinfo`, ...) implemented by at least one "provider" C module.
-The respond is the result of merging the outputs of all providers for the given request name.
+The response is the result of merging the outputs of all providers for the given request name.
 
 Some providers are implemented in [/package/gluon-respondd](https://github.com/freifunk-gluon/gluon/tree/master).
 
@@ -20,13 +20,13 @@ respondd [-p <port>] [-g <group> -i <if0> [-i <if1> ..]] [-d <dir>]
   -h               this help
 ```
 
-## Procotol
+## Protocol
 Request and response are encoded as byte strings. These strings are sent as UDP packets. Fragmentation is not supported (except by the IP stack), responses are compressed using the *deflate* algorithm.
 
-- The request is the the word '`GET`' followed by any number of request name, separated by spaces.
+- The request is the word '`GET`' followed by any number of request name, separated by spaces.
 - The response is a compressed JSON document. The top level object will contain a property for each
   requested name, the rest of the structure is determined by the actual data.
-- (Using just a single request name, without '`GET`', as request will return the data uncompressed
+- (Using just a single request name, without '`GET`', as request will return the data uncompressed
   and without an enclosing object. This kind of request is deprecated.)
 
 ### Example

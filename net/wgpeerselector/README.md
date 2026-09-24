@@ -25,17 +25,17 @@ be done by wgpeerselector based on its uci config:
 
 /etc/config/network:
 ```
-config interface 'vpn'
+config interface 'wg_mesh'
 	option proto 'wireguard'
 	option fwmark '1'
 	option private_key 'YOUR_PRIVATE_KEY_GOES_HERE'
 	list addresses 'fe80::02a4:18ff:fe7e:a10d'
 	option disabled '0'
 
-config interface 'vpn_peerselector'
+config interface 'wg_mesh_peerselector'
 	option proto 'wgpeerselector'
 	option transitive '1'
-	option ifname 'vpn'
+	option ifname 'wg_mesh'
 	option unix_group 'YOUR_UNIX_GROUP_GOES_HERE'   # this is optional
 ```
 
@@ -45,17 +45,21 @@ config peer 'test_unknown_a'
 	option enabled '1'
 	option public_key 'mIDOdscl2R3Dq+YthxdTvvtH4D53VhawzEnmet+E7W0='
 	list allowed_ips 'fe80::1/128'
-	option ifname 'vpn'
+	option ifname 'wg_mesh'
 	option endpoint 'hostname.example.com:51820'
 ```
 
 Status information can be obtained via ubus:
 ```
-root@platzhalter-525400123456:~# ubus call wgpeerselector.vpn status
+root@platzhalter-525400123456:~# ubus call wgpeerselector.wg_mesh status
 {
 	"peers": {
-		"test_unknown_a": false,
-		"test_unknown_b": false,
+		"test_unknown_a": {
+
+		},
+		"test_unknown_b": {
+
+		},
 		"test_sn07": {
 			"established": 1490
 		}
@@ -66,7 +70,7 @@ root@platzhalter-525400123456:~# ubus call wgpeerselector.vpn status
 Algorithm:
 ----------
 
-A connection is considered as "established" if the latest handshakes was
+A connection is considered as "established" if the latest handshake was
 within the last 2.5 minutes.
 
 Installing a peer:
@@ -88,7 +92,7 @@ Main Loop:
 
 Picking peers is done in such a way that all peers are tried once
 before one peer is attempted for the second time. The same goes for the
-DNS resolultion of the endpoints.
+DNS resolution of the endpoints.
 
 Warning: This algorithm only works if something is causing traffic into
 the wireguard interface. This is due to the fact, that wireguard is only

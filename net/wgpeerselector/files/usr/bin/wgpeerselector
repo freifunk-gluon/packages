@@ -305,9 +305,9 @@ function WGPeerSelector:sync_ntp()
 	local time_synced = os.execute(command) == 0
 
 	if not time_synced then
-		log(syslog.LOG_WARNING, "Time synchonization failed.")
+		log(syslog.LOG_WARNING, "Time synchronization failed.")
 	else
-		log(syslog.LOG_INFO, "Time synchonization was successful.")
+		log(syslog.LOG_INFO, "Time synchronization was successful.")
 	end
 
 	return time_synced
