@@ -19,7 +19,10 @@ void clear_manifest(struct manifest *m) {
 
 	for (size_t i = 0; i < m->n_signatures; i++)
 		free(m->signatures[i]);
+	for (size_t i = 0; i < m->n_mirrors; i++)
+		free(m->mirrors[i]);
 	free(m->signatures);
+	free(m->mirrors);
 
 	memset(m, 0, sizeof(*m));
 }
@@ -91,6 +94,12 @@ void parse_line(char *line, struct manifest *m, const char *branch, const char *
 
 			m->priority = strtof(&line[9], NULL);
 			m->priority_ok = true;
+		}
+
+		else if (!strncmp(line, "MIRROR=", 7)) {
+			m->n_mirrors++;
+			m->mirrors = safe_realloc(m->mirrors, m->n_mirrors * sizeof(char *));
+			m->mirrors[m->n_mirrors - 1] = strdup(&line[7]);
 		}
 
 		else {
