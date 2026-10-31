@@ -12,6 +12,7 @@ enum uclient_own_error_code {
 	UCLIENT_ERROR_TOO_MANY_REDIRECTS,
 	UCLIENT_ERROR_CONNECTION_RESET_PREMATURELY,
 	UCLIENT_ERROR_SIZE_MISMATCH,
+	UCLIENT_ERROR_DEADLINE,
 	UCLIENT_ERROR_STATUS_CODE = 1024,
 	UCLIENT_ERROR_INTERRUPTED = 2048,
 };
@@ -38,6 +39,6 @@ inline void * uclient_get_custom(struct uclient *cl) {
 
 ssize_t uclient_read_account(struct uclient *cl, char *buf, int len);
 
-int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data, ssize_t len, const char *firmware_version);
+int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data, ssize_t len, int deadline_msec, const char *firmware_version);
 const char *uclient_get_errmsg(int code);
 int uclient_interrupted_signal(int code);
