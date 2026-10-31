@@ -7,6 +7,16 @@
 #include <sys/types.h>
 
 
+enum uclient_own_error_code {
+	UCLIENT_ERROR_REDIRECT_FAILED = 32,
+	UCLIENT_ERROR_TOO_MANY_REDIRECTS,
+	UCLIENT_ERROR_CONNECTION_RESET_PREMATURELY,
+	UCLIENT_ERROR_SIZE_MISMATCH,
+	UCLIENT_ERROR_STATUS_CODE = 1024,
+	UCLIENT_ERROR_INTERRUPTED = 2048,
+};
+
+
 struct uclient_data {
 	/* data that can be passed in by caller and used in custom callbacks */
 	void *custom;

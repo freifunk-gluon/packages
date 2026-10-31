@@ -27,9 +27,18 @@ struct manifest {
 	size_t n_signatures;
 	ecdsa_signature_t **signatures;
 	ecdsa_sha256_context_t hash_ctx;
+	/* unparsable lines in the signature area */
+	size_t garbage_sigs;
 };
+
+
+/* Limits for what a mirror can make us parse. MAX_SIGNATURES also bounds
+ * memory allocation and cryptographic verification work in autoupdate(). */
+#define MAX_SIGNATURES 64
+#define MAX_GARBAGE_SIGS 16
 
 
 void clear_manifest(struct manifest *m);
 
-void parse_line(char *line, struct manifest *m, const char *branch, const char *image_name);
+/* Returns false when the response cannot become a usable manifest anymore */
+bool parse_line(char *line, struct manifest *m, const char *branch, const char *image_name);

@@ -17,16 +17,6 @@
 
 static const char *const user_agent = "Gluon Autoupdater (using libuclient)";
 
-enum uclient_own_error_code {
-	UCLIENT_ERROR_REDIRECT_FAILED = 32,
-	UCLIENT_ERROR_TOO_MANY_REDIRECTS,
-	UCLIENT_ERROR_CONNECTION_RESET_PREMATURELY,
-	UCLIENT_ERROR_SIZE_MISMATCH,
-	UCLIENT_ERROR_STATUS_CODE = 1024,
-	UCLIENT_ERROR_INTERRUPTED = 2048,
-};
-
-
 const char *uclient_get_errmsg(int code) {
 	static char http_code_errmsg[34];
 	if (code & UCLIENT_ERROR_STATUS_CODE) {
