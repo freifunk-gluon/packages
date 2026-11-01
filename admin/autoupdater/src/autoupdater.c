@@ -30,7 +30,9 @@
 
 
 #define MAX_LINE_LENGTH 512
-#define STRINGIFY(str) #str
+#define MANIFEST_DEADLINE_MSEC 600000
+#define STRINGIFY_(str) #str
+#define STRINGIFY(str) STRINGIFY_(str)
 
 static const char *const download_d_dir = "/usr/lib/autoupdater/download.d";
 static const char *const abort_d_dir = "/usr/lib/autoupdater/abort.d";
@@ -45,6 +47,8 @@ struct recv_manifest_ctx {
 	struct manifest m;
 	char buf[MAX_LINE_LENGTH + 1];
 	char *ptr;
+	/* we gave up on the response and ended the request */
+	bool unusable;
 };
 
 struct recv_image_ctx {
@@ -193,10 +197,17 @@ static void recv_manifest_cb(struct uclient *cl) {
 	char *newline;
 	int len;
 
+	/* uclient still delivers the body of an error page after
+	 * header_done_cb() has ended the request */
+	if (ctx->unusable || uclient_data(cl)->err_code)
+		return;
+
 	while (true) {
 		if (ctx->ptr - ctx->buf == MAX_LINE_LENGTH) {
 			fputs("autoupdater: error: encountered manifest line exceeding limit of " STRINGIFY(MAX_LINE_LENGTH) " characters\n", stderr);
-			break;
+			ctx->unusable = true;
+			uloop_end();
+			return;
 		}
 		len = uclient_read_account(cl, ctx->ptr, MAX_LINE_LENGTH - (ctx->ptr - ctx->buf));
 		if (len <= 0)
@@ -210,7 +221,11 @@ static void recv_manifest_cb(struct uclient *cl) {
 				break;
 			*newline = '\0';
 
-			parse_line(line, &ctx->m, ctx->s->branch, platforminfo_get_image_name());
+			if (!parse_line(line, &ctx->m, ctx->s->branch, platforminfo_get_image_name())) {
+				ctx->unusable = true;
+				uloop_end();
+				return;
+			}
 			line = newline + 1;
 		}
 
@@ -290,22 +305,42 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 
 	/* Download manifest */
 	ecdsa_sha256_init(&m->hash_ctx);
-	int err_code = get_url(manifest_url, recv_manifest_cb, &manifest_ctx, -1, s->old_version);
-	if (err_code != 0) {
+	int err_code = get_url(manifest_url, recv_manifest_cb, &manifest_ctx, -1, MANIFEST_DEADLINE_MSEC, s->old_version);
+	interrupted = uclient_interrupted_signal(err_code);
+
+	/* A transfer error is the better diagnosis, except for the size
+	 * mismatch caused by ending the request ourselves */
+	if (err_code != 0 && !(manifest_ctx.unusable && err_code == UCLIENT_ERROR_SIZE_MISMATCH)) {
 		fprintf(stderr, "autoupdater: warning: error downloading manifest: %s\n", uclient_get_errmsg(err_code));
-		interrupted = uclient_interrupted_signal(err_code);
 		goto out;
 	}
 
+	if (manifest_ctx.unusable) {
+		fprintf(stderr, "autoupdater: warning: %s is not a usable manifest\n", manifest_url);
+		goto out;
+	}
+
+	if (m->garbage_sigs)
+		fprintf(stderr, "autoupdater: warning: manifest %s has %zu unparsable line(s) in its signature area\n",
+			manifest_url, m->garbage_sigs);
+
 	/* Check manifest signatures */
 	{
+		if (m->n_signatures < s->good_signatures) {
+			fprintf(stderr, "autoupdater: warning: manifest %s only carried %zu signature(s), %lu are required\n",
+				manifest_url, m->n_signatures, s->good_signatures);
+			goto out;
+		}
+
 		ecc_int256_t hash;
 		ecdsa_sha256_final(&m->hash_ctx, hash.p);
-		ecdsa_verify_context_t ctxs[m->n_signatures];
+		ecdsa_verify_context_t *ctxs = safe_malloc(m->n_signatures * sizeof(*ctxs));
 		for (size_t i = 0; i < m->n_signatures; i++)
 			ecdsa_verify_prepare_legacy(&ctxs[i], &hash, m->signatures[i]);
 
 		long unsigned int good_signatures = ecdsa_verify_list_legacy(ctxs, m->n_signatures, s->pubkeys, s->n_pubkeys);
+		free(ctxs);
+
 		if (good_signatures < s->good_signatures) {
 			fprintf(stderr, "autoupdater: warning: manifest %s only carried %lu valid signatures, %lu are required\n", manifest_url, good_signatures, s->good_signatures);
 			goto out;
@@ -357,7 +392,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
 		char image_url[strlen(mirror) + strlen(m->image_filename) + 2];
 		sprintf(image_url, "%s/%s", mirror, m->image_filename);
 		ecdsa_sha256_init(&image_ctx.hash_ctx);
-		int err_code = get_url(image_url, &recv_image_cb, &image_ctx, m->imagesize, s->old_version);
+		int err_code = get_url(image_url, &recv_image_cb, &image_ctx, m->imagesize, 0, s->old_version);
 		puts("");
 		if (err_code != 0) {
 			fprintf(stderr, "autoupdater: warning: error downloading image: %s\n", uclient_get_errmsg(err_code));

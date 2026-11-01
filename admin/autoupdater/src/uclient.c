@@ -17,16 +17,6 @@
 
 static const char *const user_agent = "Gluon Autoupdater (using libuclient)";
 
-enum uclient_own_error_code {
-	UCLIENT_ERROR_REDIRECT_FAILED = 32,
-	UCLIENT_ERROR_TOO_MANY_REDIRECTS,
-	UCLIENT_ERROR_CONNECTION_RESET_PREMATURELY,
-	UCLIENT_ERROR_SIZE_MISMATCH,
-	UCLIENT_ERROR_STATUS_CODE = 1024,
-	UCLIENT_ERROR_INTERRUPTED = 2048,
-};
-
-
 const char *uclient_get_errmsg(int code) {
 	static char http_code_errmsg[34];
 	if (code & UCLIENT_ERROR_STATUS_CODE) {
@@ -59,6 +49,8 @@ const char *uclient_get_errmsg(int code) {
 		return "Connection reset prematurely";
 	case UCLIENT_ERROR_SIZE_MISMATCH:
 		return "Incorrect file size";
+	case UCLIENT_ERROR_DEADLINE:
+		return "Download took too long";
 	default:
 		return "Unknown error";
 	}
@@ -75,6 +67,17 @@ int uclient_interrupted_signal(int code) {
 static void request_done(struct uclient *cl, int err_code) {
 	uclient_data(cl)->err_code = err_code;
 	uloop_end();
+}
+
+
+struct deadline {
+	struct uloop_timeout timeout;
+	struct uclient *cl;
+};
+
+static void deadline_cb(struct uloop_timeout *timeout) {
+	struct deadline *dl = container_of(timeout, struct deadline, timeout);
+	request_done(dl->cl, UCLIENT_ERROR_DEADLINE);
 }
 
 
@@ -150,8 +153,11 @@ ssize_t uclient_read_account(struct uclient *cl, char *buf, int len) {
 }
 
 
-int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data, ssize_t len, const char *firmware_version) {
+/* deadline_msec > 0 limits the whole request; TIMEOUT_MSEC only limits the
+ * time between two reads */
+int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data, ssize_t len, int deadline_msec, const char *firmware_version) {
 	struct uclient_data d = { .custom = cb_data, .length = len };
+	struct deadline dl = { .timeout.cb = deadline_cb };
 	struct uclient_cb cb = {
 		.header_done = header_done_cb,
 		.data_read = read_cb,
@@ -201,6 +207,11 @@ int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data,
 	if (uclient_request(cl))
 		goto err;
 
+	if (deadline_msec > 0) {
+		dl.cl = cl;
+		uloop_timeout_set(&dl.timeout, deadline_msec);
+	}
+
 	ret = uloop_run();
 	if (ret) {
 		/* uloop_run() returns a signal number when interrupted */
@@ -216,6 +227,7 @@ int get_url(const char *url, void (*read_cb)(struct uclient *cl), void *cb_data,
 	ret = d.err_code;
 
 err:
+	uloop_timeout_cancel(&dl.timeout);
 	if (cl) {
 		uclient_disconnect(cl);
 		uclient_free(cl);
