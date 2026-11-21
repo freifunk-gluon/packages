@@ -155,7 +155,15 @@ static void do_ingress(double rate) {
 
 	msg = prepare_tcmsg(RTM_NEWTFILTER, NLM_F_CREATE | NLM_F_EXCL, 0xffff0000, 0, TC_H_MAKE(0, htons(ETH_P_ALL)));
 
-	const unsigned buffer = 10240;
+	/*
+	 * Allow bursts of 50ms worth of traffic, but at least 10KiB. Packets
+	 * often arrive in batches (WireGuard, for example, delivers decrypted
+	 * packets this way). A bucket of only a few packets drops part of each
+	 * batch, and TCP then stalls far below the configured rate.
+	 */
+	unsigned buffer = rate * 0.05;
+	if (buffer < 10240)
+		buffer = 10240;
 
 	struct tc_police p;
 	memset(&p, 0, sizeof(p));
