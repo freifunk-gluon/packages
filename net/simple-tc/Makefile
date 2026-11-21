@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=simple-tc
-PKG_VERSION:=3
+PKG_VERSION:=4
 
 include $(INCLUDE_DIR)/package.mk
 
