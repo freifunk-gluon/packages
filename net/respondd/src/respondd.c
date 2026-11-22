@@ -31,9 +31,16 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
+#include <ecdsautil/ecdsa.h>
+#include <ecdsautil/sha256.h>
+#include <uci.h>
+
 #define SCHEDULE_LEN 8
 #define REQUEST_MAXLEN 256
 #define MAX_MULTICAST_DELAY_DEFAULT 0
+
+ecc_int256_t ed25519_secret;
+ecc_int256_t ed25519_public;
 
 struct interface_info {
 	struct interface_info *next;
@@ -336,6 +343,180 @@ static struct json_object * eval_providers(struct provider_list *providers) {
 	return ret;
 }
 
+int random_bytes(unsigned char *buffer, size_t len) {
+	int fd;
+	size_t read_bytes = 0;
+
+	fd = open("/dev/random", O_RDONLY);
+
+	if (fd < 0) {
+		fprintf(stderr, "Can't open /dev/random: %s\n", strerror(errno));
+		goto out_error;
+	}
+
+	while (read_bytes < len) {
+		ssize_t ret = read(fd, buffer + read_bytes, len - read_bytes);
+
+		if (ret < 0) {
+			if (errno == EINTR)
+				continue;
+
+			fprintf(stderr, "Unable to read random bytes: %s\n", strerror(errno));
+			goto out_error;
+		}
+
+		read_bytes += ret;
+	}
+
+	close(fd);
+	return 1;
+
+out_error:
+	close(fd);
+	return 0;
+}
+
+// str must be a char[2*(offset+len)+1]
+static void sprintf_hex(char *str_buf, const uint8_t *buf, size_t len, size_t offset) {
+	str_buf += 2*offset;
+	for (size_t i = 0; i < len; i++) {
+		snprintf(str_buf, 3, "%02hhx", buf[i]);
+		str_buf += 2;
+	}
+}
+
+int parsehex(void *buffer, const char *string, size_t len) {
+	// number of digits must be even
+	if ((strlen(string) & 1) == 1)
+		return 0;
+
+	// number of digits must be 2 * len
+	if (strlen(string) != 2 * len)
+		return 0;
+
+	while (len--) {
+		int ret;
+		ret = sscanf(string, "%02hhx", (char*)(buffer++));
+		string += 2;
+
+		if (ret != 1)
+			break;
+	}
+
+	if (len != -1)
+		return 0;
+
+	return 1;
+}
+
+ecc_int256_t read_or_generate_key() {
+	struct uci_context *ctx = uci_alloc_context();
+	if (!ctx) {
+		fprintf(stderr, "respondd: error: failed to allocate UCI context\n");
+		abort();
+	}
+
+	ctx->flags &= ~UCI_FLAG_STRICT;
+
+	struct uci_package *p;
+	struct uci_section *s;
+
+	if (uci_load(ctx, "respondd", &p) != UCI_OK) {
+		fputs("respondd: error: unable to load UCI package\n", stderr);
+		exit(1);
+	}
+
+	s = uci_lookup_section(ctx, p, "settings");
+	if (!s || strcmp(s->type, "respondd")) {
+		fputs("respondd: error: could not load UCI section respondd.settings\n", stderr);
+		exit(1);
+	}
+
+	const char *secret_str = uci_lookup_option_string(ctx, s, "secret");
+	ecc_int256_t secret;
+
+	if (!secret_str || !parsehex(&secret, secret_str, 32)) {
+		fputs("respondd: no valid key found. generating new key.\n", stderr);
+
+		// generate it
+		if (!random_bytes(secret.p, 32)) {
+			fputs("respondd: unable to read random bytes.\n", stderr);
+			exit(1);
+		}
+		ecc_25519_gf_sanitize_secret(&secret, &secret);
+
+		// save it to uci
+		char secret_str_new[64+1];
+		sprintf_hex(secret_str_new, secret.p, 32, 0);
+		struct uci_ptr ptr ={
+			.package = "respondd",
+			.section = "settings",
+			.option = "secret",
+			.value = secret_str_new,
+		};
+		uci_set(ctx, &ptr);
+		uci_commit(ctx, &ptr.p, false);
+		uci_unload(ctx, ptr.p);
+		fputs("respondd: key generated and saved.\n", stderr);
+	}
+
+	uci_free_context(ctx);
+
+	return secret;
+}
+
+static void public_from_secret(ecc_int256_t *pub, const ecc_int256_t *secret) {
+	ecc_25519_work_t work;
+	ecc_25519_scalarmult_base(&work, secret);
+	ecc_25519_store_packed_legacy(pub, &work);
+}
+
+// The string representation of obj is signed using the secret. After signing,
+// a structure containing the public key and the signature is added into obj.
+// The obj looks like this after calling sign_json(obj, ...):
+//
+//    {
+//        ...,
+//        "auth": {
+//            "secure_nodeid": "25077b1914533e94a60853678b8484531a5f63463de87786f042e3d88d0bbc27",
+//            "sig": "eca0455a99a6b79edc719c18aa46c7d8f960e041f77f836326e6eae08064606320daff6f11cb0d0a2fb51a346725e3dc01e9a85f7c064ec857200c302937409"
+//        }
+//    }
+//
+// To verify the signature, the substructure "auth" has to be removed before.
+// The string representation of obj has to be densely packed. No whitespace and
+// tabs " " between keys, no newlines and the order of keys must not be changed.
+static void sign_json(struct json_object * obj, const ecc_int256_t *secret, const ecc_int256_t *pub) {
+	// TODO: This currently enables replay attacks, as the json does not contain
+	//       any time value or so... However, we do not care much, as
+	//       this is probably not an effective attack vector.
+	const char *str = json_object_to_json_string_ext(obj, JSON_C_TO_STRING_PLAIN);
+
+	// hash
+	ecc_int256_t hash;
+	ecdsa_sha256_context_t hash_ctx;
+	ecdsa_sha256_init(&hash_ctx);
+	ecdsa_sha256_update(&hash_ctx, str, strlen(str));
+	ecdsa_sha256_final(&hash_ctx, hash.p);
+
+	struct json_object *auth = json_object_new_object();
+
+	// generate signature
+	ecdsa_signature_t signature;
+	char signature_str[128+1];
+	ecdsa_sign_legacy(&signature, &hash, secret);
+	sprintf_hex(signature_str, signature.r.p, 32, 0);
+	sprintf_hex(signature_str, signature.s.p, 32, 32);
+	json_object_object_add(auth, "signature", json_object_new_string(signature_str));
+
+	// append pubkey
+	char pub_str[64+1];
+	sprintf_hex(pub_str, pub->p, 32, 0);
+	json_object_object_add(auth, "secure_nodeid", json_object_new_string(pub_str));
+
+	json_object_object_add(obj, "auth", auth);
+}
+
 /**
  * Find all providers for the type and return the (eventually cached) result
  *
@@ -361,6 +542,8 @@ static struct json_object * single_request(char *type) {
 		return json_object_get(r->cache);
 
 	struct json_object *ret = eval_providers(r->providers);
+
+	sign_json(ret, &ed25519_secret, &ed25519_public);
 
 	if (r->cache_time) {
 		if (r->cache)
@@ -722,6 +905,10 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	// load keys for ed25519 signatures
+	ed25519_secret = read_or_generate_key();
+	public_from_secret(&ed25519_public, &ed25519_secret);
 
 	if (bind(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
 		perror("bind failed");
